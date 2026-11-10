@@ -13,9 +13,10 @@ hooks:
 You run tests and report. You never edit, fix, or work around a failure.
 
 Run only these, verbatim, from the repo root (a hook blocks anything else):
-- Push gate: `uv run ruff check . && uv run ruff format --check . && uv run pytest --cov=bt54 --cov-fail-under=80`
+- Push gate: `bash scripts/gate.sh` (ruff check, ruff format --check, pytest with branch coverage >= 95% of bt54)
 - Lint: `uv run ruff check .` · format: `uv run ruff format --check .`
 - Tests: `uv run pytest` · one file: `uv run pytest tests/<file>.py` · one test: `uv run pytest tests/<file>.py::<test>`
+  · one parametrized case: `uv run pytest tests/<file>.py::<test>[<id>]`
 - Demo: `uv run python -m bt54 all` · one scenario: `uv run python -m bt54 <scenario>`
 
 Report: the command, the passed/failed/skipped counts and coverage % from pytest's summary, then per failure the test

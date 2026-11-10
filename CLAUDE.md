@@ -81,11 +81,9 @@ before explaining it. Until the CLI lands (roadmap in `agents/init.md`), run the
 failed. 4. Commit everything (Conventional Commits) and push to the session's branch on `origin`; never force-push.
 
 ### Push gate
-No push unless the gate is green:
-`uv run ruff check . && uv run ruff format --check . && uv run pytest --cov=bt54 --cov-fail-under=80`
-(lint, format, all tests, coverage ≥ 80% of `bt54`). GitHub Actions runs the same line on Python 3.12 and 3.13.
-Until the gate exists (roadmap step 1), only changes to `CLAUDE.md`, `agents/`, `.claude/` and docs may be pushed.
-Merge to `main` only from a green branch.
+No push unless the gate is green: `bash scripts/gate.sh` (lint, format, all tests, branch coverage ≥ 95% of `bt54`).
+It is the gate's only copy: GitHub Actions runs the same script on Python 3.12 and 3.13. Merge to `main` only from
+a green branch.
 
 ## KISS — keep it stupid simple
 Simple logic, code and comments: human-readable, clean, lean. No abstraction, option or helper that isn't needed
