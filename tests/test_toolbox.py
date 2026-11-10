@@ -2,7 +2,7 @@
 
 import pytest
 
-from bt54.toolbox import aes_cmac, c1, e, f4, f5, f6, g2, h6, h7, s1
+from bt54.toolbox import aes_cmac, c1, e, f4, f5, f6, g2, h6, h7, s1, xor
 
 
 def h(text: str) -> bytes:
@@ -76,8 +76,33 @@ def test_s1_matches_spec_example():
     assert s1(bytes(16), r1, r2) == h("9a1fe1f0e8b0f49b5b4216ae796da062")
 
 
+def test_c1_and_s1_depend_on_the_key():
+    """The spec examples use k = 0, so a k-ignoring bug would pass them."""
+    other_k = b"\x01" + bytes(15)
+    args = (
+        h("5783D52156AD6F0E6388274EC6702EE0"),
+        h("07071000000101"),
+        h("05000800000302"),
+        1,
+        0,
+        h("A1A2A3A4A5A6"),
+        h("B1B2B3B4B5B6"),
+    )
+    assert c1(bytes(16), *args) != c1(other_k, *args)
+    r1, r2 = (
+        h("000F0E0D0C0B0A091122334455667788"),
+        h("010203040506070899AABBCCDDEEFF00"),
+    )
+    assert s1(bytes(16), r1, r2) != s1(other_k, r1, r2)
+
+
 def test_f4_matches_d2():
     assert f4(U, V, N1, b"\x00") == h("f2c916f1 07a9bd1c f1eda1be a974872d")
+
+
+def test_f4_depends_on_z():
+    """D.2 only has Z = 0; Passkey Entry uses Z = 0x80 | bit (§2.3.5.6.3)."""
+    assert f4(U, V, N1, b"\x00") != f4(U, V, N1, b"\x81")
 
 
 def test_f5_matches_d3():
@@ -171,6 +196,16 @@ def test_cross_transport_key_conversion(convert, expected):
             "iat and rat must be 0 or 1",
             id="c1-address-type-2",
         ),
+        pytest.param(
+            lambda: e(bytes(15), bytes(16)), "key must be 16", id="e-short-key"
+        ),
+        pytest.param(
+            lambda: e(bytes(16), bytes(17)), "plaintext must be 16", id="e-long-block"
+        ),
+        pytest.param(
+            lambda: aes_cmac(bytes(15), b""), "key must be 16", id="cmac-short-key"
+        ),
+        pytest.param(lambda: xor(b"a", b"ab"), "zip", id="xor-length-mismatch"),
     ],
 )
 def test_bad_inputs_are_rejected(call, message):

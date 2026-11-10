@@ -65,30 +65,43 @@ def test_ccm_matches_cryptography(nonce_len, tag_len, aad, length):
     assert ccm.decrypt(key, nonce, sealed, aad, tag_len) == plaintext
 
 
+@pytest.mark.parametrize(
+    ("aad_len", "length"),
+    [
+        pytest.param(0xFEFF, 0, id="aad-0xFEFF"),
+        pytest.param(0, 0xFFFF, id="payload-65535-with-L2"),
+    ],
+)
+def test_ccm_accepts_the_largest_supported_sizes(aad_len, length):
+    key, nonce, aad, plaintext = bytes(16), bytes(13), bytes(aad_len), bytes(length)
+    expected = AESCCM(key, tag_length=4).encrypt(nonce, plaintext, aad)
+    assert ccm.encrypt(key, nonce, plaintext, aad) == expected
+
+
 def flip(data: bytes, i: int = 0) -> bytes:
     """data with the low bit of octet i flipped."""
     return data[:i] + bytes([data[i] ^ 1]) + data[i + 1 :]
 
 
-AAD = b"\x02"
-SEALED = ccm.encrypt(SK, NONCE, b"payload", AAD)
-
-
 @pytest.mark.parametrize(
-    ("key", "nonce", "sealed", "aad"),
+    "tamper",
     [
-        pytest.param(flip(SK), NONCE, SEALED, AAD, id="wrong-key"),
-        pytest.param(SK, flip(NONCE), SEALED, AAD, id="wrong-nonce"),
-        pytest.param(SK, NONCE, flip(SEALED), AAD, id="flipped-ciphertext"),
-        pytest.param(SK, NONCE, flip(SEALED, len(SEALED) - 1), AAD, id="flipped-mic"),
-        pytest.param(SK, NONCE, SEALED[:-1], AAD, id="truncated"),
-        pytest.param(SK, NONCE, SEALED, b"\x03", id="wrong-aad"),
-        pytest.param(SK, NONCE, SEALED, b"", id="missing-aad"),
+        pytest.param(lambda k, n, s, a: (flip(k), n, s, a), id="wrong-key"),
+        pytest.param(lambda k, n, s, a: (k, flip(n), s, a), id="wrong-nonce"),
+        pytest.param(lambda k, n, s, a: (k, n, flip(s), a), id="flipped-ciphertext"),
+        pytest.param(
+            lambda k, n, s, a: (k, n, flip(s, len(s) - 1), a), id="flipped-mic"
+        ),
+        pytest.param(lambda k, n, s, a: (k, n, s[:-1], a), id="truncated"),
+        pytest.param(lambda k, n, s, a: (k, n, s, b"\x03"), id="wrong-aad"),
+        pytest.param(lambda k, n, s, a: (k, n, s, b""), id="missing-aad"),
     ],
 )
-def test_decrypt_rejects_anything_tampered(key, nonce, sealed, aad):
+def test_decrypt_rejects_anything_tampered(tamper):
+    aad = b"\x02"
+    sealed = ccm.encrypt(SK, NONCE, b"payload", aad)
     with pytest.raises(ccm.InvalidTag):
-        ccm.decrypt(key, nonce, sealed, aad)
+        ccm.decrypt(*tamper(SK, NONCE, sealed, aad))
 
 
 @pytest.mark.parametrize(
@@ -122,7 +135,9 @@ def test_decrypt_rejects_anything_tampered(key, nonce, sealed, aad):
             id="sealed-shorter-than-tag",
         ),
         pytest.param(
-            lambda: ccm.decrypt(bytes(15), NONCE, SEALED), "key must be 16", id="key-15"
+            lambda: ccm.decrypt(bytes(15), NONCE, bytes(8)),
+            "key must be 16",
+            id="key-15",
         ),
     ],
 )
