@@ -26,7 +26,7 @@ Now (after roadmap steps 1–2):
   - `ccm.py`: the hand-rolled RFC 3610 AES-CCM, AES-128, default 4-octet MIC, ValueError on a bad tag;
   - `device.py`: `BTDevice` (P-256 keypair, ECDH with the same-X check, IOCap, random static
     address, `pairing_address`) and `load_public_key` (off-curve → `InvalidPublicKey`).
-- `tests/` (173 tests, 100% line + branch coverage):
+- `tests/` (175 tests, 100% line + branch coverage):
   - `test_toolbox.py`: Appendix D D.1–D.6 and D.8–D.12, the c1/s1 examples, e via Vol 6 Part C, bad inputs;
   - `test_ccm.py`: the 4 Vol 6 Part C packets, AESCCM parity (encrypt + decrypt), tamper → `InvalidTag`, bad params;
   - `test_device.py`.
@@ -74,5 +74,5 @@ Target (exact module split decided when building it, fewest files):
 - 2026-11-10: bootstrap (CLAUDE.md, `agents/`, `.claude/`, LICENSE, `.gitignore`, README *Responsible use*).
 - 2026-11-10: roadmap steps 1–2 done on `feat/tooling-and-vectors`; gate green locally and in CI (run 42910415051: 3.12 + 3.13, 154 passed, 99%)
   — merged to `main` (`64128fe`).
-- 2026-11-10: Audit #1 done; the approved fixes are on `fix/audit-1` (173 tests, 100% line + branch coverage).
-  Next: roadmap step 4 (CLI) in Plan Mode.
+- 2026-11-10: Audit #1 done; the approved fixes are merged to `main` (`a0b7ee2`): 175 tests, 100% line + branch
+  coverage, CI green on 3.12 and 3.13. Next: roadmap step 4 (CLI) in Plan Mode (handoff 2026-11-10-02).

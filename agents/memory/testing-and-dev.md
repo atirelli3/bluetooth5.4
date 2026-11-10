@@ -38,3 +38,18 @@ The gate, pytest/coverage, the `tests` subagent and its hook, the local Python s
 - **Why:** without a User-Agent bluetooth.com returns 105 bytes; the rtk hook rewrites a bare `curl` and truncates
   its output.
 - **Where:** pulling sample data for new tests (2026-11-10: Appendix D, §2.2.3–2.2.4, Vol 6 Part C §1).
+
+## Pushing workflow files needs the gh `workflow` scope
+- **Rule:** git pushes through `gh auth git-credential`. A push that adds or changes `.github/workflows/*` needs
+  the `workflow` scope on the token. The user grants it with `! gh auth refresh -h github.com -s workflow` (an
+  interactive browser login).
+- **Why:** on 2026-11-10 the first push of `ci.yml` was rejected: "refusing to allow an OAuth App to create or
+  update workflow … without `workflow` scope". The scope has been granted since.
+- **Where:** `.github/workflows/ci.yml`.
+
+## Renames on macOS: python re, not sed
+- **Rule:** do word-boundary renames with `python3` + `re.subn`, asserting the expected count (`(?<![A-Za-z0-9_])X\b`).
+  Never use `sed '\b'`.
+- **Why:** BSD sed has no `\b`. The `F5_SALT`/`BLOCK` rename half-applied silently and left a NameError (Audit #1
+  L4, 2026-11-10).
+- **Where:** any code rename in the repo.
