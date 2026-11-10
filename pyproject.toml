@@ -1,0 +1,21 @@
+[project]
+name = "bt54"
+version = "0.1.0"
+description = "Bluetooth LE 5.4 security lab: crypto toolbox, pairing, AES-CCM, Encrypted Advertising Data and attacks, in simulation."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "cryptography>=50.0.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.4",
+]
