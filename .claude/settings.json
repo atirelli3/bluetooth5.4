@@ -1,0 +1,9 @@
+{
+  "model": "opusplan",
+  "effortLevel": "high",
+  "enabledPlugins": { "ecc@ecc": true, "ponytail@ponytail": true },
+  "extraKnownMarketplaces": {
+    "ponytail": { "source": { "source": "github", "repo": "DietrichGebert/ponytail" } },
+    "ecc": { "source": { "source": "git", "url": "https://github.com/affaan-m/ECC.git" } }
+  }
+}

@@ -28,3 +28,10 @@ Quello che verrà mostrato sarà il contesto presente e perché per ottenere uno
 - **encrypt-then-MAC**
 
 Quale è stata la soluzione proposta e implementata (come standard) nel protocollo v5.4 e le varie motivazioni.
+
+## Responsible use
+
+Everything in this repository is a simulation: devices, pairings and attacks run in Python against simulated peers
+and the Bluetooth Core Specification's sample data. No code talks to a radio or to a real device. The attack
+scenarios exist to study and explain the weaknesses and their fixes; do not use them against devices you do not own
+or are not authorised to test.
