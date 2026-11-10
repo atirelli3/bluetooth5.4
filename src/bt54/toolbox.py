@@ -3,7 +3,7 @@
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.cmac import CMAC
 
-F5_SALT = bytes.fromhex("6C888391AAF5A53860370BDB5A6083BE")
+_F5_SALT = bytes.fromhex("6C888391AAF5A53860370BDB5A6083BE")
 
 
 def _require(**fields: tuple[bytes, int]) -> None:
@@ -69,7 +69,7 @@ def f4(U: bytes, V: bytes, X: bytes, Z: bytes) -> bytes:
 def f5(W: bytes, N1: bytes, N2: bytes, A1: bytes, A2: bytes) -> tuple[bytes, bytes]:
     """LE SC key generation (§2.2.7): (MacKey, LTK) from DHKey W (32 octets), N1, N2 (16), A1, A2 (7)."""
     _require(W=(W, 32), N1=(N1, 16), N2=(N2, 16), A1=(A1, 7), A2=(A2, 7))
-    t = aes_cmac(F5_SALT, W)
+    t = aes_cmac(_F5_SALT, W)
     body = b"btle" + N1 + N2 + A1 + A2 + b"\x01\x00"
     return aes_cmac(t, b"\x00" + body), aes_cmac(t, b"\x01" + body)
 

@@ -14,12 +14,6 @@ MaxKeySize = 1
 assert MaxKeySize > 0, "MaxKeySize deve essere > 0"
 
 
-# Funzione di utilità per convertire un indirizzo Bluetooth da stringa a bytes
-def bt_address_to_bytes(bt_address: str) -> bytes:
-    # Rimuove i due punti e converte in bytes
-    return bytes.fromhex(bt_address.replace(":", ""))
-
-
 # =========================================
 # #   P A I R I N G   P R O T O C O L S   #
 # =========================================
@@ -31,10 +25,10 @@ def just_work(alice: BTDevice, bob: BTDevice, mitm: bool = False):
     PKb = bob.pK
 
     # Alice calcola la chiave Diffie-Hellman utilizzando la chiave pubblica di Bob
-    alice.computeDHKey(PKb)
+    alice.compute_dh_key(PKb)
 
     # Bob calcola la chiave Diffie-Hellman utilizzando la chiave pubblica di Alice
-    bob.computeDHKey(PKa)
+    bob.compute_dh_key(PKa)
 
     if "DEBUG" == mode:
         print(f"Alice_DHKey =\t {alice.dhkey.hex()}\nBob_DHKey = \t {bob.dhkey.hex()}")
@@ -87,10 +81,10 @@ def numeric_comparison(alice: BTDevice, bob: BTDevice, mitm: bool = False):
     PKb = bob.pK
 
     # Alice calcola la chiave Diffie-Hellman utilizzando la chiave pubblica di Bob
-    alice.computeDHKey(PKb)
+    alice.compute_dh_key(PKb)
 
     # Bob calcola la chiave Diffie-Hellman utilizzando la chiave pubblica di Alice
-    bob.computeDHKey(PKa)
+    bob.compute_dh_key(PKa)
 
     if "DEBUG" == mode:
         print(f"Alice_DHKey =\t {alice.dhkey.hex()}\nBob_DHKey = \t {bob.dhkey.hex()}")
@@ -161,14 +155,12 @@ def ltk_generation(alice: BTDevice, bob: BTDevice, Na: bytes, Nb: bytes):
     IOcapA = bytes([AuthReq, OOB, alice.IOCap])  # Capability di Alice
     IOcapB = bytes([AuthReq, OOB, bob.IOCap])  # Capability di Bob
     # Converti gli indirizzi Bluetooth di Alice e Bob in bytes
-    A = bt_address_to_bytes(alice.address)  # Indirizzo di Alice
-    B = bt_address_to_bytes(bob.address)  # Indirizzo di Bob
+    A = alice.pairing_address  # Indirizzo di Alice
+    B = bob.pairing_address  # Indirizzo di Bob
 
     # 9. Generare la LTK
-    MacKey_a, LTK_a = f5(
-        alice.dhkey, alice.nonce, Nb, bt_address_to_bytes(alice.address), B
-    )
-    MacKey_b, LTK_b = f5(bob.dhkey, Na, bob.nonce, A, bt_address_to_bytes(bob.address))
+    MacKey_a, LTK_a = f5(alice.dhkey, alice.nonce, Nb, alice.pairing_address, B)
+    MacKey_b, LTK_b = f5(bob.dhkey, Na, bob.nonce, A, bob.pairing_address)
 
     if "DEBUG" == mode:
         print(f"Alice:\n\t - LTK = {LTK_a.hex()}\n\t - MAC = {MacKey_a.hex()}")
@@ -177,18 +169,16 @@ def ltk_generation(alice: BTDevice, bob: BTDevice, Na: bytes, Nb: bytes):
 
     # 10. Calcolare le challenges per verificare LTK
     R = bytes(16)  # R è 0 per Numeric Comparison
-    EA = f6(MacKey_a, alice.nonce, Nb, R, IOcapA, bt_address_to_bytes(alice.address), B)
-    EB = f6(MacKey_b, bob.nonce, Na, R, IOcapB, bt_address_to_bytes(bob.address), A)
+    EA = f6(MacKey_a, alice.nonce, Nb, R, IOcapA, alice.pairing_address, B)
+    EB = f6(MacKey_b, bob.nonce, Na, R, IOcapB, bob.pairing_address, A)
 
     # 11. Controllo incrociato dei valori (simulato)
-    assert (
-        f6(MacKey_b, Na, bob.nonce, R, IOcapA, A, bt_address_to_bytes(bob.address))
-        == EA
-    ), "La challege ricevuta da Alice non coindice con quella calcolata da Bob!"
-    assert (
-        f6(MacKey_a, Nb, alice.nonce, R, IOcapB, B, bt_address_to_bytes(alice.address))
-        == EB
-    ), "La challege ricevuta da Bob non coindice con quella calcolata da Alice!"
+    assert f6(MacKey_b, Na, bob.nonce, R, IOcapA, A, bob.pairing_address) == EA, (
+        "La challege ricevuta da Alice non coindice con quella calcolata da Bob!"
+    )
+    assert f6(MacKey_a, Nb, alice.nonce, R, IOcapB, B, alice.pairing_address) == EB, (
+        "La challege ricevuta da Bob non coindice con quella calcolata da Alice!"
+    )
 
     return LTK_a
 

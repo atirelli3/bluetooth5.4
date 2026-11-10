@@ -9,7 +9,7 @@ import hmac
 
 from bt54.toolbox import e, xor
 
-BLOCK = 16
+_BLOCK = 16
 
 
 class InvalidTag(ValueError):
@@ -34,7 +34,7 @@ def _length_field_size(nonce: bytes, aad: bytes, tag_len: int, length: int) -> i
 
 def _pad(data: bytes) -> bytes:
     """Zero-pad data to a whole number of blocks."""
-    return data + bytes(-len(data) % BLOCK)
+    return data + bytes(-len(data) % _BLOCK)
 
 
 def _counter(nonce: bytes, i: int, size: int) -> bytes:
@@ -51,15 +51,15 @@ def _mac(
     if aad:
         blocks += _pad(len(aad).to_bytes(2, "big") + aad)
     blocks += _pad(plaintext)
-    x = bytes(BLOCK)
-    for i in range(0, len(blocks), BLOCK):
-        x = e(key, xor(x, blocks[i : i + BLOCK]))
+    x = bytes(_BLOCK)
+    for i in range(0, len(blocks), _BLOCK):
+        x = e(key, xor(x, blocks[i : i + _BLOCK]))
     return x[:tag_len]
 
 
 def _ctr(key: bytes, nonce: bytes, data: bytes, size: int) -> bytes:
     """XOR data with the keystream S_1, S_2, ... (RFC 3610 §2.3)."""
-    count = -(-len(data) // BLOCK)
+    count = -(-len(data) // _BLOCK)
     stream = b"".join(e(key, _counter(nonce, i, size)) for i in range(1, count + 1))
     return xor(data, stream[: len(data)])
 
