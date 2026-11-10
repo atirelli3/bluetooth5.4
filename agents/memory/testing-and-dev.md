@@ -11,9 +11,19 @@ The gate, pytest/coverage, the `tests` subagent and its hook, the local Python s
   it in sync with the commands in `tests.md`).
 
 ## Running the legacy 2024 demo
-- **Rule:** until roadmap step 1, run it from a throwaway venv in the scratchpad:
-  `python3 -m venv <scratch>/venv && <scratch>/venv/bin/pip install -r requirments.txt`, then
-  `cd src && PYTHONDONTWRITEBYTECODE=1 <scratch>/venv/bin/python demo.py`.
-- **Why:** the code imports `Crypto` (pycryptodome), which is not in the local pyenv 3.12.10, and `uv` is not
-  installed yet (2026-11-10). The flag keeps `__pycache__` out of the tree.
-- **Where:** `src/demo.py`, `test/**/*.py`.
+- **Rule:** `uv run python src/demo.py` (it imports the installed `bt54`). The CLI replaces it in roadmap step 4.
+- **Why:** since step 1 the demo runs on `bt54` + `cryptography`; pycryptodome is gone.
+- **Where:** `src/demo.py`.
+
+## Other Python versions without touching .venv
+- **Rule:** `UV_LOCKED=1 uv run --isolated --python 3.13 pytest -q --cov=bt54 --cov-fail-under=80` mirrors the CI
+  3.13 job.
+- **Why:** `uv run --python X` without `--isolated` rebuilds the project `.venv` on that version.
+- **Where:** `.github/workflows/ci.yml` matrix.
+
+## Fetching the spec from the shell
+- **Rule:** `/usr/bin/curl -sL -A 'Mozilla/5.0' <bluetooth.com spec URL>`, then strip the HTML (python `re` +
+  `html.unescape`) and slice by heading.
+- **Why:** without a User-Agent bluetooth.com returns 105 bytes; the rtk hook rewrites a bare `curl` and truncates
+  its output.
+- **Where:** pulling sample data for new tests (2026-11-10: Appendix D, §2.2.3–2.2.4, Vol 6 Part C §1).

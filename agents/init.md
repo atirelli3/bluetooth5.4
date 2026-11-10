@@ -20,27 +20,28 @@ choices lives only in `agents/memory/` (grep by function/file/concept); user dec
 - macOS only; GitHub `atirelli3/bluetooth5.4`; GitHub Actions. Simulation only, no hardware.
 
 ## Layout
-Now (2024 code, untouched):
-- `src/demo.py`: one script, runs at import. Covers Just Works (+MitM), Numeric Comparison (+MitM), LTK via f5/f6,
-  LTK → BR/EDR link key via h6 (CT2=0), AES-CCM, and KNOB + the 7-octet fix.
-- `src/bluetooth/`: `bt_crypto_toolbox.py` (f4 f5 f6 g2 h6, pycryptodome CMAC), `bt_ccm.py` (pycryptodome CCM
-  wrapper, 16-octet tag), `bt_device.py` (`BTDevice`: P-256 keypair via `cryptography`, DHKey, IOCap, address).
-- `test/`: exploration scripts, not pytest tests. `pairing/c1.py` and `s1.py` (inputs = the spec's inline examples),
-  `f4.py` (duplicate of the toolbox), `encrypt/ccm.py` (hand-rolled CCM vs pycryptodome),
-  `passkey.py` / `numeric_comparison.py` (FAKE sha256 stand-ins for c1/s1/f4/g2), `pk_coordinate.py`.
+Now (after roadmap steps 1–2):
+- `src/bt54/`:
+  - `toolbox.py`: e, AES-CMAC, c1, s1, f4, f5, f6, g2, h6, h7 on `cryptography`; raises ValueError on wrong lengths;
+  - `ccm.py`: the hand-rolled RFC 3610 AES-CCM, AES-128, default 4-octet MIC, ValueError on a bad tag;
+  - `device.py`: `BTDevice` (P-256 keypair, DHKey, IOCap, address).
+- `tests/` (154 tests, 99% coverage):
+  - `test_toolbox.py`: Appendix D D.1–D.6 and D.8–D.12, the c1/s1 examples, e via Vol 6 Part C, bad inputs;
+  - `test_ccm.py`: the 4 Vol 6 Part C packets, AESCCM parity (encrypt + decrypt), tamper → `InvalidTag`, bad params;
+  - `test_device.py`.
+- `src/demo.py`: the 2024 script ported to `bt54` (`uv run python src/demo.py`); the CLI replaces it in step 4.
+- `pyproject.toml` + `uv.lock` (runtime: `cryptography`; dev: pytest, pytest-cov, ruff); `.github/workflows/ci.yml`
+  (the gate on 3.12 and 3.13, actions pinned by SHA, `UV_LOCKED=1`).
 - `docs/resources/`: Italian/English study notes with TODOs (`keys.md`, `pairing/intro.md`, `pairing/phase1.md`
-  are empty), `assets/` images; `docs/cpa.pdf` = 2024 slides (archive).
-- `requirments.txt` (typo, pins cryptography 43.0.0 + pycryptodome 3.20.0); `README.md` in Italian.
+  are empty), `assets/` images; `docs/cpa.pdf` = 2024 slides (archive); `README.md` in Italian.
 
 Target (exact module split decided when building it, fewest files):
-- `pyproject.toml` + `uv.lock`; `src/bt54/` (toolbox, pairing, CCM/EAD, device, attacks, `__main__.py` CLI);
-  `tests/` (pytest, spec vectors); `docs/` (theory + `docs/attacks/<name>.md`); `.github/workflows/ci.yml`; `LICENSE`.
+- `src/bt54/` gains pairing, EAD, attacks and the `__main__.py` CLI; `docs/attacks/<name>.md`; README in English.
 
 ## Roadmap
-1. **Tooling** (Plan Mode): pyproject + uv + ruff + pytest-cov; `src/bluetooth` → `src/bt54`; pycryptodome →
-   `cryptography`; `requirments.txt` goes; CI workflow. → the push gate exists.
-2. **Vectors**: tests for AES-CMAC (D.1), f4 f5 f6 g2 h6 h7 (D.2–D.8), LTK ↔ link key (D.9–D.12), c1/s1
-   (§2.2.3–2.2.4), LE CCM (Vol 6 Part C §1); convert the `test/` scripts, delete the fakes and the duplicate.
+1. ~~**Tooling**~~ done 2026-11-10: uv + `pyproject.toml`, `bluetooth` → `bt54`, pycryptodome → `cryptography`, CI.
+2. ~~**Vectors**~~ done 2026-11-10: every Appendix D vector except D.7 (`ah`, not implemented), the c1/s1 examples,
+   and the Vol 6 Part C SK + CCM packets; `test/` and `requirments.txt` deleted.
 3. **Audit #1**: confirm the known issues below, find the rest; fix what the user picks.
 4. **CLI**: `python -m bt54 <scenario>|all`, expected vs actual, exit 0/1; `src/demo.py` goes.
 5. **Portfolio**: README in English, CI badge, docs translated and completed.
@@ -52,16 +53,23 @@ Target (exact module split decided when building it, fewest files):
   detected", which is the opposite of Just Works' real weakness (see `pairing.md`). Verified by running it.
 - Numeric Comparison MitM block: `Nb = numeric_comparison(...)` would bind a tuple and `Na` is stale from the previous
   scenario (masked today because the call raises first). All scenarios reuse the same Alice/Bob key pairs.
-- `g2` values are printed without zero-padding (`63519`, should read `063519`).
 - `BTDevice.generate_random_bt_address` uses `random` and returns 7 random octets with an odd first octet. f5/f6
   expect A1/A2 as 56 bits (address type + 48-bit address): check the exact layout via `spec`.
 - `knob()`: `entropy_reduction` rebinds its `MaxKeySize` argument, while `brute_force_ccm` reads the module global.
-- The demo's CCM uses a 12-octet nonce and a 16-octet tag. LE uses a 13-octet nonce (EAD: Randomizer 5 ‖ IV 8) and a
-  4-octet MIC.
-- `test/encrypt/ccm.py` crashes on its own assert (B0 is built as 15 octets). It also pads PKCS-style instead of with
-  zeros and handles AAD of 14 octets at most.
-- `__pycache__` was tracked (removed from the index 2026-11-10); no `.gitignore` before that.
+- Deferred from the 2026-11-10 reviews:
+  - `BTDevice` needs type hints (fix it together with the address issue);
+  - the legacy demo detects attacks with `assert`, which vanishes under `python -O`, and CI never runs the demo.
+    Both go with the step-4 CLI (exit codes + tests);
+  - Dependabot and `pip-audit` for the pinned actions and the lockfile belong to step 5.
+- Kept on purpose: CI runs on every push (feature branches are merged locally, so there may be no PR) and uses
+  ruff's defaults (0.17 already includes I and RUF).
+- Fixed in steps 1–2:
+  - g2 now returns the 32-bit value, and the demo shows it `mod 10^6` with 6 digits;
+  - the demo's CCM uses a 13-octet nonce and a 4-octet MIC;
+  - the broken hand-rolled CCM was rewritten and is tested;
+  - `__pycache__` is untracked.
 
 ## Status
-- 2026-11-10: bootstrap. CLAUDE.md, `agents/`, `.claude/` (subagents search/tests/docs/spec), LICENSE (MIT),
-  `.gitignore`, README *Responsible use* added. No roadmap step started. Next: roadmap step 1.
+- 2026-11-10: bootstrap (CLAUDE.md, `agents/`, `.claude/`, LICENSE, `.gitignore`, README *Responsible use*).
+- 2026-11-10: roadmap steps 1–2 done on `feat/tooling-and-vectors`; gate green locally (3.12 + 3.13), CI not yet run
+  (needs a push). Next: Audit #1 (step 3).

@@ -14,6 +14,14 @@ AES-CCM in the LE link layer and in Encrypted Advertising Data (Core 5.4), the k
 - **Why:** CSS v11 Part A §1.23 (read 2026-11-10).
 - **Where:** future `bt54` EAD module + its tests.
 
+## Brute-force loops catch InvalidTag, never ValueError
+- **Rule:** `bt54.ccm.decrypt` raises `ccm.InvalidTag` (a `ValueError` subclass) only when the tag fails to verify,
+  and a plain `ValueError` for bad parameters. Any key-search loop catches `ccm.InvalidTag` only.
+- **Why:** with `except ValueError`, a wrong-length key or nonce fails on every candidate, the loop finds nothing,
+  and the KNOB demo prints "key not found", a fake successful defence (silent-failure review 2026-11-10).
+  Mutation check: with `hmac.compare_digest` forced to True, all 7 tamper tests fail.
+- **Where:** `src/bt54/ccm.py` `decrypt`; `src/demo.py` `knob()` → the future KNOB scenario.
+
 ## Key material
 - **Rule:** the Encrypted Data Key Material characteristic is 24 octets: session key (16) ‖ IV (8). It is readable only
   over an encrypted, authenticated ACL link, so sender and receivers must have paired first.
