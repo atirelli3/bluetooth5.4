@@ -71,5 +71,5 @@ Target (exact module split decided when building it, fewest files):
 
 ## Status
 - 2026-11-10: bootstrap (CLAUDE.md, `agents/`, `.claude/`, LICENSE, `.gitignore`, README *Responsible use*).
-- 2026-11-10: roadmap steps 1–2 done on `feat/tooling-and-vectors`; gate green locally (3.12 + 3.13), CI not yet run
-  (needs a push). Next: Audit #1 (step 3).
+- 2026-11-10: roadmap steps 1–2 done on `feat/tooling-and-vectors`; gate green locally and in CI (run 42910415051: 3.12 + 3.13, 154 passed, 99%)
+  — branch pushed, not merged to `main`. Next: Audit #1 (step 3).
