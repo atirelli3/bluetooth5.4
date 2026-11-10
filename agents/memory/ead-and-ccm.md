@@ -23,7 +23,9 @@ AES-CCM in the LE link layer and in Encrypted Advertising Data (Core 5.4), the k
 - **Where:** `src/bt54/ccm.py` `decrypt`; `src/demo.py` `knob()` → the future KNOB scenario.
 
 ## Key material
-- **Rule:** the Encrypted Data Key Material characteristic is 24 octets: session key (16) ‖ IV (8). It is readable only
-  over an encrypted, authenticated ACL link, so sender and receivers must have paired first.
-- **Why:** Vol 3 Part C §12.6 (as cited by CSS §1.23) and the Bluetooth 5.4 technical overview (read 2026-11-10).
+- **Rule:** the Encrypted Data Key Material characteristic is 24 octets: session key (16) ‖ IV (8). Its permission is
+  "Readable when authenticated and authorized" (Table 12.9): in practice a receiver pairs with the advertiser
+  and reads it over an encrypted link.
+- **Why:** Vol 3 Part C §12.6 (as cited by CSS §1.23) and the Bluetooth 5.4 technical overview (read 2026-11-10); permission text
+  verified by Audit #1 (A1).
 - **Where:** future `bt54` EAD module; `docs/resources/keyshare.md`.

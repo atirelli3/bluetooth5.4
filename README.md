@@ -1,7 +1,6 @@
 # Bluetooth 5.4
 
 - Studente:  Tirelli Andrea
-- Matricola: 191979
 - Corso:     Crittografia Applicata - 2024
 
 <br />
