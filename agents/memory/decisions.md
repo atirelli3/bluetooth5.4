@@ -59,6 +59,18 @@ proposing a change or a cut so nothing already decided is re-proposed. Full regi
 - [USER-YES] (B) Full scaffold (CLAUDE.md, `agents/`, `.claude/`); memory split by area: crypto-toolbox, pairing,
   ead-and-ccm, attacks, testing-and-dev, decisions.
 
+## Step 5 (2026-11-11)
+- [USER-YES] Docs layout: flat English `docs/` (`pairing.md`, `ccm.md`, `ead.md`, `references.md`, `attacks/`,
+  `assets/`); stubs, BR/EDR leftovers and the Italian study files are deleted. Spec screenshots are not republished:
+  the tables are retyped as text and the flows are Mermaid diagrams.
+- [USER-YES] GitHub repo description/topics and Dependabot alert settings: propose the text first, apply after the
+  user confirms.
+- [WHY] Audit #1 P3 mixed two rules: LE masks the MOST significant octets (Vol 3 Part H §2.3.4), BR/EDR AES-CCM the
+  LEAST significant ones (Vol 2 Part H §9.4). `knob-bredr` now uses `mask_key_bredr`; the 2024 demo's
+  "keep the leading octets" was the BR/EDR rule.
+- [KEPT] `audit.yml` is a separate workflow with the stable `pip-audit` pinned to 2.10.1, not the preview `uv audit`;
+  `scripts/gate.sh` stays offline.
+
 ## Step 4 CLI reviews (2026-11-11, ecc code-reviewer, security-reviewer, silent-failure-hunter, python-reviewer)
 - [USER-YES] The `knob-le` verdict uses real attacker speed, not the Python-limited one: 2^56 trials at an assumed
   10^10 trials/s = 83 days, plus a printed three-row table (hand-rolled CCM, native AESCCM in a Python loop, assumed

@@ -15,7 +15,13 @@ from cryptography.hazmat.primitives.ciphers.aead import AESCCM
 
 from bt54 import ccm
 from bt54.device import AuthReq, BTDevice, IOCap
-from bt54.pairing import PairingFailed, Reason, authenticate, exchange, mask_key
+from bt54.pairing import (
+    PairingFailed,
+    Reason,
+    authenticate,
+    exchange,
+    mask_key_bredr,
+)
 from bt54.toolbox import e
 
 MESSAGE = b"secret LE data"
@@ -106,11 +112,18 @@ def _mitm(compare_numbers: bool, new_device: Callable[[], BTDevice]) -> str:
 
 
 def _recover_key(
-    sealed: bytes, nonce: bytes, aad: bytes, size: int
+    sealed: bytes, nonce: bytes, aad: bytes, size: int, *, bredr: bool = False
 ) -> tuple[bytes | None, int]:
-    """Brute force over keys whose 16 - size top octets are 0: (key or None, trials); only InvalidTag = wrong key."""
+    """Brute force over the keys of `size` octets: (key or None, trials); only InvalidTag means 'wrong key'.
+
+    LE keys have their 16 - size most significant octets zeroed, BR/EDR keys their least significant ones.
+    """
     for trials, candidate in enumerate(range(256**size), start=1):
-        key = candidate.to_bytes(16)
+        key = (
+            candidate.to_bytes(size) + bytes(16 - size)
+            if bredr
+            else candidate.to_bytes(16)
+        )
         try:
             ccm.decrypt(key, nonce, sealed, aad)
         except ccm.InvalidTag:
@@ -141,12 +154,14 @@ def _duration(rate: float) -> str:
 def knob_bredr() -> str:
     """BR/EDR KNOB (CVE-2019-9506): entropy negotiated down to 1 octet, so 256 trials recover the key.
 
-    The packet framing is simplified: the LE nonce size and AAD are reused.
+    Models the AES-CCM key reduction of Vol 2 Part H §9.4 (E0 reduces its key differently, not modelled). The packet
+    framing is simplified: the LE nonce size and AAD are reused.
     """
-    key = mask_key(secrets.token_bytes(16), 1)
+    key = mask_key_bredr(secrets.token_bytes(16), 1)
     nonce = secrets.token_bytes(13)
     aad = ccm.ll_aad(_HEADER)
-    found, trials = _recover_key(ccm.encrypt(key, nonce, MESSAGE, aad), nonce, aad, 1)
+    sealed = ccm.encrypt(key, nonce, MESSAGE, aad)
+    found, trials = _recover_key(sealed, nonce, aad, 1, bredr=True)
     print(f"  session key (1 octet): {key.hex()}, found after {trials} trials")
     return "key recovered" if found == key else "key not recovered"
 

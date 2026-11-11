@@ -49,13 +49,24 @@ class Exchange:
     number: int
 
 
-def mask_key(key: bytes, size: int) -> bytes:
-    """Encryption key size reduction (§2.3.4): the 16 - size most significant octets of a 16-octet key set to 0."""
+def _require_mask_args(key: bytes, size: int) -> None:
+    """Raise ValueError unless key is 16 octets and size is 1 to 16."""
     if len(key) != 16:
         raise ValueError(f"key must be 16 octets, got {len(key)}")
     if not 1 <= size <= 16:
         raise ValueError(f"size must be 1 to 16, got {size}")
+
+
+def mask_key(key: bytes, size: int) -> bytes:
+    """LE encryption key size reduction (Vol 3 Part H §2.3.4): the 16 - size most significant octets set to 0."""
+    _require_mask_args(key, size)
     return bytes(16 - size) + key[16 - size :]
+
+
+def mask_key_bredr(key: bytes, size: int) -> bytes:
+    """BR/EDR AES-CCM key size reduction (Vol 2 Part H §9.4): the 16 - size least significant octets set to 0."""
+    _require_mask_args(key, size)
+    return key[:size] + bytes(16 - size)
 
 
 def check_commit(commit: bytes, pk_a: bytes, pk_b: bytes, nb: bytes) -> None:

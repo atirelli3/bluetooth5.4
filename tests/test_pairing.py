@@ -13,6 +13,7 @@ from bt54.pairing import (
     check_commit,
     exchange,
     mask_key,
+    mask_key_bredr,
 )
 from bt54.toolbox import f4, f5, f6, g2
 
@@ -74,6 +75,14 @@ def test_mask_key_matches_the_spec_example():
     assert mask_key(key, 7) == bytes.fromhex("00000000 00000000 00345678 9ABCDEF0")
 
 
+def test_mask_key_bredr_matches_the_spec_example():
+    """Vol 2 Part H §9.4 (BR/EDR AES-CCM): the least significant octets are replaced with 0x00."""
+    key = bytes.fromhex("12345678 9ABCDEF0 12345678 9ABCDEF0")
+    assert mask_key_bredr(key, 7) == bytes.fromhex(
+        "12345678 9ABCDE00 00000000 00000000"
+    )
+
+
 @pytest.mark.parametrize("size", [1, 7, 15, 16])
 def test_mask_key_keeps_the_least_significant_octets(size):
     key = bytes(range(1, 17))
@@ -82,6 +91,15 @@ def test_mask_key_keeps_the_least_significant_octets(size):
     assert len(masked) == 16
 
 
+@pytest.mark.parametrize("size", [1, 7, 15, 16])
+def test_mask_key_bredr_keeps_the_most_significant_octets(size):
+    key = bytes(range(1, 17))
+    masked = mask_key_bredr(key, size)
+    assert masked == key[:size] + bytes(16 - size)
+    assert len(masked) == 16
+
+
+@pytest.mark.parametrize("mask", [mask_key, mask_key_bredr])
 @pytest.mark.parametrize(
     ("key", "size"),
     [
@@ -90,9 +108,9 @@ def test_mask_key_keeps_the_least_significant_octets(size):
         pytest.param(bytes(16), 17, id="size-17"),
     ],
 )
-def test_mask_key_rejects_bad_input(key, size):
+def test_the_masks_reject_bad_input(mask, key, size):
     with pytest.raises(ValueError, match="must be"):
-        mask_key(key, size)
+        mask(key, size)
 
 
 @pytest.mark.parametrize("size", [0, 17])

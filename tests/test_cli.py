@@ -196,6 +196,28 @@ def test_the_brute_force_covers_the_whole_one_octet_space(last):
     assert cli._recover_key(sealed, NONCE, AAD, 1) == (key, last + 1)
 
 
+@pytest.mark.parametrize("first", [0x00, 0x01, 0xFF])
+def test_the_bredr_brute_force_searches_keys_that_keep_their_first_octet(first):
+    """Vol 2 Part H §9.4: a 1-octet BR/EDR key is that octet followed by 15 zero octets."""
+    key = bytes([first]) + bytes(15)
+    sealed = ccm.encrypt(key, NONCE, b"secret", AAD)
+    assert cli._recover_key(sealed, NONCE, AAD, 1, bredr=True) == (key, first + 1)
+
+
+def test_the_bredr_brute_force_does_not_find_an_le_masked_key():
+    key = bytes(15) + b"\x07"
+    sealed = ccm.encrypt(key, NONCE, b"secret", AAD)
+    assert cli._recover_key(sealed, NONCE, AAD, 1, bredr=True) == (None, 256)
+
+
+def test_knob_bredr_zeroes_the_least_significant_octets(capsys):
+    """The session key it prints is one octet then 15 zero octets (BR/EDR), not the LE layout."""
+    assert cli.knob_bredr() == "key recovered"
+    assert re.search(
+        r"session key \(1 octet\): [0-9a-f]{2}0{30},", capsys.readouterr().out
+    )
+
+
 def test_the_brute_force_finds_nothing_in_too_small_a_key_space():
     _, sealed = sealed_under(2)
     assert cli._recover_key(sealed, NONCE, AAD, 1) == (None, 256)

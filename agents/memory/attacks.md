@@ -20,13 +20,16 @@ Each attack adds its lessons here when its scenario is built; write-ups go to `d
 - **Where:** `src/bt54/__main__.py` `_mitm(compare_numbers=...)`.
 
 ## KNOB is BR/EDR; LE has a floor of 7 octets, so `knob-le` shows the refusal and an extrapolation
-- **Rule:** `knob-bredr` masks the key to 1 octet (the MSOs become 0) and recovers it in at most 256 trials
-  (CVE-2019-9506). `knob-le` shows a 1-octet offer refused (`ENCRYPTION_KEY_SIZE`) and prices the 2^56 trials of
+- **Rule:** `knob-bredr` reduces the key to 1 octet the BR/EDR way (`mask_key_bredr`: the 15 LEAST significant octets
+  become 0, Vol 2 Part H §9.4, AES-CCM) and recovers it in at most 256 trials (CVE-2019-9506); `mask_key` is the LE
+  rule (the MOST significant octets become 0, Vol 3 Part H §2.3.4). They are opposite: never swap them. `knob-le` shows a 1-octet offer refused (`ENCRYPTION_KEY_SIZE`) and prices the 2^56 trials of
   the 7-octet floor at an assumed 10^10 trials/s: 83 days (the verdict). It prints a three-row table: the hand-rolled
   CCM (about 4·10^4 trials/s, 56,000 years), `cryptography`'s AESCCM in a Python loop (about 6.5·10^5 trials/s,
   3,400 years) and the assumed hardware. The first two rows are measured on the running machine and only printed.
 - **Why (verdict wording):** 7 octets is the spec floor, not a strong key; "infeasible" holds only at the speed of
   the didactic CCM (review of 2026-11-11). `knob-bredr` reuses the LE nonce size and AAD (framing simplified).
-- **Why:** LE negotiates 7–16 octets (§2.3.4, Audit #1 P3, P4); the 2024 demo kept the leading octets and used an
-  illegal 1-octet LE key. The LE downgrade to 7 octets (R1) is a step-6 scenario.
-- **Where:** `src/bt54/__main__.py` `knob_bredr`, `knob_le`, `_recover_key`.
+- **Why:** LE negotiates 7–16 octets (§2.3.4, Audit #1 P4). The 2024 demo kept the leading octets, which is the
+  BR/EDR rule; its fault was running it as LE with an illegal 1-octet key. Audit #1 P3 cited the LE section for a
+  BR/EDR attack and `knob-bredr` followed it until step 5. E0 (BR/EDR legacy and SSP) reduces its key by a polynomial
+  operation (Vol 2 Part H §4.5), not by zeroing: not modelled. The LE downgrade to 7 octets (R1) is a step-6 scenario.
+- **Where:** `src/bt54/__main__.py` `knob_bredr`, `knob_le`, `_recover_key(bredr=...)`; `src/bt54/pairing.py`.
