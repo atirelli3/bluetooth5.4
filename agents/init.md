@@ -85,4 +85,7 @@ Target (exact module split decided when building it, fewest files):
   coverage, CI green on 3.12 and 3.13.
 - 2026-11-11: roadmap step 4 done and merged to `main` (`c31f7e0`): CLI with 7 scenarios, `pairing.py`, LL nonce/AAD,
   `src/demo.py` deleted; reviewed by 4 ECC agents + 15 mutants killed; 280 tests, 100% line + branch coverage;
-  CI green on 3.12 and 3.13. Next: roadmap step 5 (handoff 2026-11-11-01).
+  CI green on 3.12 and 3.13.
+- 2026-11-11: roadmap step 5 done and merged to `main` (`6d51318`): English README + docs + 3 attack write-ups, `knob-bredr`
+  fixed to the BR/EDR rule, EAD sample sets as tests, Dependabot + `pip-audit`, repo description/topics and Dependabot
+  alerts set; 296 tests, 100% line + branch coverage, CI green. Next: roadmap step 6 in Plan Mode (handoff 2026-11-11-02).
