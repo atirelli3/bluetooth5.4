@@ -38,11 +38,13 @@ Now (after roadmap steps 1–4):
   - `test_device.py`, `test_pairing.py` (spies pin the f6 arguments), `test_cli.py` (every scenario, exit codes).
 - `pyproject.toml` + `uv.lock` (runtime: `cryptography`; dev: pytest, pytest-cov, ruff); `.github/workflows/ci.yml`
   (the gate on 3.12 and 3.13, actions pinned by SHA, `UV_LOCKED=1`).
-- `docs/resources/`: Italian/English study notes with TODOs (`pairing/intro.md`, `pairing/phase1.md`
-  empty, `keys.md` a heading only), `assets/` images; `docs/cpa.pdf` = 2024 slides (archive); `README.md` in Italian.
+- `docs/` (English, flat): `pairing.md`, `ccm.md`, `ead.md`, `references.md`, `attacks/` (`just-works-mitm.md`,
+  `numeric-comparison-mitm.md`, `knob.md`); `docs/cpa.pdf` = 2024 slides (archive). `README.md` is the English showcase.
+- `.github/`: `workflows/ci.yml` (the gate), `workflows/audit.yml` (weekly `pip-audit` of the lockfile, pinned 2.10.1),
+  `dependabot.yml` (actions + uv, weekly).
 
 Target (exact module split decided when building it, fewest files):
-- `src/bt54/` gains pairing, EAD, attacks and the `__main__.py` CLI; `docs/attacks/<name>.md`; README in English.
+- `src/bt54/` gains the EAD module and more attacks, each with `docs/attacks/<name>.md`.
 
 ## Roadmap
 1. ~~**Tooling**~~ done 2026-11-10: uv + `pyproject.toml`, `bluetooth` → `bt54`, pycryptodome → `cryptography`, CI.
@@ -51,8 +53,10 @@ Target (exact module split decided when building it, fewest files):
 3. ~~**Audit #1**~~ done 2026-11-10 (`agents/audits/2026-11-10-01.md`): L1–L4, T1–T10, A1–A6, D7 fixed.
 4. ~~**CLI**~~ done 2026-11-11 on `feat/cli`: `python -m bt54 <scenario>|all`, 7 scenarios, `src/demo.py` deleted.
    Audit #1 P1–P10 met, except CT2 → h6/h7 (CTKD), which waits for BLURtooth in step 6 (CT2 stays 0 for now).
-5. **Portfolio**: README in English, CI badge, docs translated and completed. Inputs: Audit #1 D1–D11; the P1
-   correction (Just Works does run the Cb check, `decisions.md`); one write-up per scenario in `docs/attacks/`.
+5. ~~**Portfolio**~~ done 2026-11-11 on `feat/portfolio-docs` (CI green, not yet merged): English README + CI badge,
+   corrected docs (D1–D11, P1), 3 attack write-ups, Dependabot + `pip-audit`, `knob-bredr` fixed to the BR/EDR rule
+   (Vol 2 Part H §9.4), the CSS Encrypted Data sample sets pass as tests. Open, each needs the user's yes: merge to
+   `main`, GitHub description/topics, Dependabot alerts + security updates (repo settings).
 6. **Research**: EAD (CSS Part A §1.23), then one attack at a time, each with its scenario + write-up.
    - First: per-side message views + association-model selection from IOCap, built with Method Confusion
      (`pairing.md`, "known limit"): they let an attacker alter IOcap, addresses, Cb or nonces.

@@ -11,8 +11,10 @@ AES-CCM in the LE link layer and in Encrypted Advertising Data (Core 5.4), the k
 
   The CCM nonce is therefore 13 octets (Randomizer 5 ‖ IV 8). A new Randomizer is due every time the payload or the
   random address changes, and a new IV every time the session key changes.
-- **Why:** CSS v11 Part A §1.23 (read 2026-11-10).
-- **Where:** future `bt54` EAD module + its tests.
+- **Why:** CSS v11 Part A §1.23 (read 2026-11-10). The sample sets of §2.3.1 and §2.3.2 already pass on the plain CCM:
+  nonce = `ccm.ll_nonce(R & (2**39 - 1), R >> 39, IV)` with R the Randomizer as an integer (the AD data carries it
+  least significant octet first), AAD = `b"\xea"`, key and IV MSB-first as printed.
+- **Where:** `tests/test_ccm.py::test_encrypted_data_matches_the_css_sample_data`; future `bt54` EAD module.
 
 ## Brute-force loops catch InvalidTag, never ValueError
 - **Rule:** `bt54.ccm.decrypt` raises `ccm.InvalidTag` (a `ValueError` subclass) only when the tag fails to verify,
@@ -37,4 +39,4 @@ AES-CCM in the LE link layer and in Encrypted Advertising Data (Core 5.4), the k
   and reads it over an encrypted link.
 - **Why:** Vol 3 Part C §12.6 (as cited by CSS §1.23) and the Bluetooth 5.4 technical overview (read 2026-11-10); permission text
   verified by Audit #1 (A1).
-- **Where:** future `bt54` EAD module; `docs/resources/keyshare.md`.
+- **Where:** future `bt54` EAD module; `docs/ead.md`.
