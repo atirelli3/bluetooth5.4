@@ -20,17 +20,22 @@ choices lives only in `agents/memory/` (grep by function/file/concept); user dec
 - macOS only; GitHub `atirelli3/bluetooth5.4`; GitHub Actions. Simulation only, no hardware.
 
 ## Layout
-Now (after roadmap steps 1–2):
+Now (after roadmap steps 1–4):
 - `src/bt54/`:
   - `toolbox.py`: e, AES-CMAC, c1, s1, f4, f5, f6, g2, h6, h7 on `cryptography`; raises ValueError on wrong lengths;
-  - `ccm.py`: the hand-rolled RFC 3610 AES-CCM, AES-128, default 4-octet MIC, ValueError on a bad tag;
-  - `device.py`: `BTDevice` (P-256 keypair, ECDH with the same-X check, IOCap, random static
-    address, `pairing_address`) and `load_public_key` (off-curve → `InvalidPublicKey`).
-- `tests/` (175 tests, 100% line + branch coverage):
+  - `ccm.py`: the hand-rolled RFC 3610 AES-CCM, AES-128, default 4-octet MIC, ValueError on a bad tag; `ll_nonce`
+    and `ll_aad` build the LE link-layer nonce and AAD (Vol 6 Part E Tables 2.1, 2.3);
+  - `device.py`: `BTDevice` (P-256 keypair, ECDH with the same-X check, `IOCap`, `AuthReq`, `max_key_size`, random
+    static address, `pairing_address`) and `load_public_key` (off-curve → `InvalidPublicKey`);
+  - `pairing.py`: LE Secure Connections Just Works + Numeric Comparison: `exchange` (key size, stage 1),
+    `authenticate` (f5, Ea/Eb, masked LTK), `check_commit`, `mask_key`, `PairingFailed(reason)`;
+  - `__main__.py`: the scenario CLI, `python -m bt54 <scenario>|all`: just-works, just-works-mitm,
+    numeric-comparison, numeric-comparison-mitm, numeric-comparison-mitm-blind, knob-bredr, knob-le.
+- `tests/` (280 tests, 100% line + branch coverage):
   - `test_toolbox.py`: Appendix D D.1–D.6 and D.8–D.12, the c1/s1 examples, e via Vol 6 Part C, bad inputs;
-  - `test_ccm.py`: the 4 Vol 6 Part C packets, AESCCM parity (encrypt + decrypt), tamper → `InvalidTag`, bad params;
-  - `test_device.py`.
-- `src/demo.py`: the 2024 script ported to `bt54` (`uv run python src/demo.py`); the CLI replaces it in step 4.
+  - `test_ccm.py`: the 4 Vol 6 Part C packets, AESCCM parity (encrypt + decrypt), tamper → `InvalidTag`, bad params,
+    `ll_nonce` / `ll_aad` against the sample nonces, replay and reflection;
+  - `test_device.py`, `test_pairing.py` (spies pin the f6 arguments), `test_cli.py` (every scenario, exit codes).
 - `pyproject.toml` + `uv.lock` (runtime: `cryptography`; dev: pytest, pytest-cov, ruff); `.github/workflows/ci.yml`
   (the gate on 3.12 and 3.13, actions pinned by SHA, `UV_LOCKED=1`).
 - `docs/resources/`: Italian/English study notes with TODOs (`pairing/intro.md`, `pairing/phase1.md`
@@ -44,35 +49,36 @@ Target (exact module split decided when building it, fewest files):
 2. ~~**Vectors**~~ done 2026-11-10: every Appendix D vector except D.7 (`ah`, not implemented), the c1/s1 examples,
    and the Vol 6 Part C SK + CCM packets; `test/` and `requirments.txt` deleted.
 3. ~~**Audit #1**~~ done 2026-11-10 (`agents/audits/2026-11-10-01.md`): L1–L4, T1–T10, A1–A6, D7 fixed.
-4. **CLI**: `python -m bt54 <scenario>|all`, expected vs actual, exit 0/1; `src/demo.py` goes.
-   Requirements: Audit #1 P1–P10 (two-party MitM pairings, KNOB masking the MSOs, LE floor of 7 octets,
-   AuthReq from named flags with CT2 → h6/h7, message roles, SK = e(LTK, SKD) + LL nonce, typed errors).
-5. **Portfolio**: README in English, CI badge, docs translated and completed. Inputs: Audit #1 D1–D11.
+4. ~~**CLI**~~ done 2026-11-11 on `feat/cli`: `python -m bt54 <scenario>|all`, 7 scenarios, `src/demo.py` deleted.
+   Audit #1 P1–P10 met, except CT2 → h6/h7 (CTKD), which waits for BLURtooth in step 6 (CT2 stays 0 for now).
+5. **Portfolio**: README in English, CI badge, docs translated and completed. Inputs: Audit #1 D1–D11; the P1
+   correction (Just Works does run the Cb check, `decisions.md`); one write-up per scenario in `docs/attacks/`.
 6. **Research**: EAD (CSS Part A §1.23), then one attack at a time, each with its scenario + write-up.
-   Audit #1 R1 adds: LE key-size downgrade to 7 octets (the Max Encryption Key Size is not authenticated).
+   - First: per-side message views + association-model selection from IOCap, built with Method Confusion
+     (`pairing.md`, "known limit"): they let an attacker alter IOcap, addresses, Cb or nonces.
+   - Audit #1 R1 adds: LE key-size downgrade to 7 octets (the Max Encryption Key Size is not authenticated).
 
-## Known issues (2026-11-10; Audit #1 P1–P10, fixed by the step-4 CLI)
-- `just_work(mitm=True)` does not simulate a MitM. It swaps Bob's nonce inside a single pairing, so `Cb_mitm == Cb1`
-  holds by construction, and the run then fails the f6 check because the two LTKs differ. The demo prints "MitM
-  detected", which is the opposite of Just Works' real weakness (see `pairing.md`). Verified by running it.
-- Numeric Comparison MitM block: `Nb = numeric_comparison(...)` would bind a tuple and `Na` is stale from the previous
-  scenario (masked today because the call raises first). All scenarios reuse the same Alice/Bob key pairs.
-- `knob()`: `entropy_reduction` rebinds its `MaxKeySize` argument, while `brute_force_ccm` reads the module global.
-- Deferred from the 2026-11-10 reviews:
-  - the legacy demo detects attacks with `assert`, which vanishes under `python -O`, and CI never runs the demo.
-    Both go with the step-4 CLI (exit codes + tests);
-  - Dependabot and `pip-audit` for the pinned actions and the lockfile belong to step 5.
+## Known issues (2026-11-11)
+- Known limits of the simulation (`pairing.md`; fixed in step 6, `decisions.md`):
+  - the Cb, Ea and Eb checks read shared device objects, so they fail only through a DHKey mismatch: IOcap, address
+    or nonce tampering cannot be modelled yet;
+  - the association model is not chosen from IOCap (both devices must set SC, or `exchange` raises);
+  - `knob-bredr` reuses the LE nonce size and AAD (framing simplified).
+- Deferred: Dependabot and `pip-audit` for the pinned actions and the lockfile belong to step 5.
 - Kept on purpose: CI runs on every push (feature branches are merged locally, so there may be no PR) and uses
   ruff's defaults (0.17 already includes I and RUF).
-- Fixed in steps 1–2:
-  - g2 now returns the 32-bit value, and the demo shows it `mod 10^6` with 6 digits;
-  - the demo's CCM uses a 13-octet nonce and a 4-octet MIC;
-  - the broken hand-rolled CCM was rewritten and is tested;
-  - `__pycache__` is untracked.
+- Fixed in step 4: the 2024 demo's wrong models (P1–P5: Just Works and Numeric Comparison MitM, KNOB masking, the
+  illegal 1-octet LE key, AuthReq), its `assert`-based detection, reused key pairs and dead code; `src/demo.py` is
+  deleted. The CLI has no `assert`; `python -O -m bt54 all` passes.
+- Fixed in steps 1–2: g2 returns the 32-bit value; the hand-rolled CCM was rewritten and is tested; `__pycache__`
+  is untracked.
 
 ## Status
 - 2026-11-10: bootstrap (CLAUDE.md, `agents/`, `.claude/`, LICENSE, `.gitignore`, README *Responsible use*).
 - 2026-11-10: roadmap steps 1–2 done on `feat/tooling-and-vectors`; gate green locally and in CI (run 42910415051: 3.12 + 3.13, 154 passed, 99%)
   — merged to `main` (`64128fe`).
 - 2026-11-10: Audit #1 done; the approved fixes are merged to `main` (`a0b7ee2`): 175 tests, 100% line + branch
-  coverage, CI green on 3.12 and 3.13. Next: roadmap step 4 (CLI) in Plan Mode (handoff 2026-11-10-02).
+  coverage, CI green on 3.12 and 3.13.
+- 2026-11-11: roadmap step 4 done on `feat/cli` (pushed, not merged): CLI with 7 scenarios, `pairing.py`, LL nonce/AAD,
+  `src/demo.py` deleted; reviewed by 4 ECC agents + 15 mutants killed; 280 tests, 100% line + branch coverage.
+  Next: CI green on 3.12/3.13, merge to `main`, then roadmap step 5 (handoff 2026-11-11-01).

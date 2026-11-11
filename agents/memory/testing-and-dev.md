@@ -20,10 +20,16 @@ The gate, pytest/coverage, the `tests` subagent and its hook, the local Python s
   Spec vectors built on zero keys hide key-handling bugs.
 - **Where:** `tests/`.
 
-## Running the legacy 2024 demo
-- **Rule:** `uv run python src/demo.py` (it imports the installed `bt54`). The CLI replaces it in roadmap step 4.
-- **Why:** since step 1 the demo runs on `bt54` + `cryptography`; pycryptodome is gone.
-- **Where:** `src/demo.py`.
+## The scenario CLI is the demo
+- **Rule:** `uv run python -m bt54 all` (or one scenario name) is the demo; it exits 1 on any expected/actual mismatch.
+  Tests count the exact verdict lines (`"  PASS"`, `"  FAIL"`), never the substring.
+- **Why:**
+  - `FAIL` is a substring of `NUMERIC_COMPARISON_FAILED`, an expected outcome, so a substring count lies;
+  - the scenarios are deterministic: `numeric-comparison-mitm` redraws a 6-digit collision (p = 10^-6), and the
+    `knob-le` verdict uses an assumed rate, not the wall-clock sample (that one is only printed);
+  - `src/demo.py` (2024) is deleted; its `assert`s vanished under `python -O`, the CLI has none (`python -O -m bt54 all`
+    passes).
+- **Where:** `src/bt54/__main__.py`, `tests/test_cli.py`.
 
 ## Other Python versions without touching .venv
 - **Rule:** `UV_PROJECT_ENVIRONMENT=<scratch>/venv313 UV_PYTHON=3.13 UV_LOCKED=1 bash scripts/gate.sh` runs the

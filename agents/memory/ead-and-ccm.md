@@ -20,7 +20,16 @@ AES-CCM in the LE link layer and in Encrypted Advertising Data (Core 5.4), the k
 - **Why:** with `except ValueError`, a wrong-length key or nonce fails on every candidate, the loop finds nothing,
   and the KNOB demo prints "key not found", a fake successful defence (silent-failure review 2026-11-10).
   Mutation check: with `hmac.compare_digest` forced to True, all 7 tamper tests fail.
-- **Where:** `src/bt54/ccm.py` `decrypt`; `src/demo.py` `knob()` → the future KNOB scenario.
+- **Where:** `src/bt54/ccm.py` `decrypt`; `src/bt54/__main__.py` `_recover_key`, tested by
+  `test_the_brute_force_does_not_hide_a_bad_parameter`.
+
+## The LE link-layer nonce is LSO-first; bt54 values are MSB-first
+- **Rule:** `ll_nonce(counter, direction, iv)` writes packetCounter (39 bits) with directionBit as bit 7 of Nonce4,
+  least significant octet first, then the 8-octet IV reversed. Pass the IV MSB-first; direction 1 = sent by the
+  Central. `ll_aad` masks NESN, SN and MD (0xE3 keeps the rest) of the header's first octet.
+- **Why:** Vol 6 Part E Tables 2.1 and 2.3; the Vol 6 Part C IV `0xDEAFBABEBADCAB24` appears in the sample nonces as
+  `24abdcbabebaafde`. Replay (counter + 1) and reflection (other direction) both fail the MIC, which the tests show.
+- **Where:** `src/bt54/ccm.py` `ll_nonce`, `ll_aad`; `tests/test_ccm.py`.
 
 ## Key material
 - **Rule:** the Encrypted Data Key Material characteristic is 24 octets: session key (16) ‖ IV (8). Its permission is

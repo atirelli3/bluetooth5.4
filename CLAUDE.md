@@ -72,8 +72,7 @@ Fire when the message is exactly the keyword (any case); the greetings also fire
 ### Demo
 `uv run python -m bt54 all` runs every scenario. Each scenario prints its expected and actual outcome, and the run
 exits non-zero on any mismatch. Report per scenario: name, expected, actual, PASS/FAIL; read a failing scenario's code
-before explaining it. Until the CLI lands (roadmap in `agents/init.md`), run the legacy `src/demo.py` the way
-`agents/memory/testing-and-dev.md` says, and label the result as the legacy demo.
+before explaining it.
 
 ### Close session
 1. Write the handoff. 2. Update `agents/init.md` (status, progress, open work) and the area's

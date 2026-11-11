@@ -23,7 +23,7 @@ The Security Manager toolbox (`ah` not implemented; e, c1, s1, AES-CMAC, f4, f5,
   zero-padded to 6 digits.
 - **Why:** the 2024 code folded `mod 10^6` into g2, so it could not be checked against D.5, and it printed
   `63519` instead of `063519`.
-- **Where:** `src/bt54/toolbox.py` `g2`; `src/demo.py` `numeric_comparison`.
+- **Where:** `src/bt54/toolbox.py` `g2`; `src/bt54/pairing.py` `exchange` (`Exchange.number`).
 
 ## Cross-transport key conversion is h6/h7 composition
 - **Rule:**

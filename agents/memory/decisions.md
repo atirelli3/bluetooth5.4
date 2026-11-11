@@ -59,6 +59,20 @@ proposing a change or a cut so nothing already decided is re-proposed. Full regi
 - [USER-YES] (B) Full scaffold (CLAUDE.md, `agents/`, `.claude/`); memory split by area: crypto-toolbox, pairing,
   ead-and-ccm, attacks, testing-and-dev, decisions.
 
+## Step 4 CLI reviews (2026-11-11, ecc code-reviewer, security-reviewer, silent-failure-hunter, python-reviewer)
+- [USER-YES] The `knob-le` verdict uses real attacker speed, not the Python-limited one: 2^56 trials at an assumed
+  10^10 trials/s = 83 days, plus a printed three-row table (hand-rolled CCM, native AESCCM in a Python loop, assumed
+  hardware). Replaces the plan's "infeasible (> 1 year)".
+- [USER-YES] Per-side message views (each device computes from what it received, so an attacker can alter IOcap,
+  addresses, Cb or nonces) and the association-model selection from IOCap are built in step 6, with Method
+  Confusion, the first attack that needs them. Not now (YAGNI).
+- [WHY] Audit #1 P1's "Just Works skips the commit check" was a misreading: Figure 2.3 has step 6a (check Cb, abort
+  on failure) in the Just Works flow. `exchange()` runs the check for both methods.
+- [WHY] AuthReq bits verified from the spec's Figure 3.3 image: b1:b0 Bonding_Flags, b2 MITM, b3 SC, b4 Keypress,
+  b5 CT2, b7:b6 RFU.
+- [KEPT] `ccm.InvalidTag` stays a `ValueError` subclass (the brute-force rule in `ead-and-ccm.md` already handles
+  it); no separate `Direction` enum (YAGNI); no broad `except Exception` in `main` (a crash is the honest signal).
+
 ## Audit #1 (2026-11-10, `agents/audits/2026-11-10-01.md`)
 - [USER-YES] (#1 L1–L4) Library fixes now:
   - random static address from `secrets`, plus `pairing_address`;
