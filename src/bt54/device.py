@@ -1,10 +1,31 @@
 """Simulated Bluetooth LE device: P-256 key pair, ECDH with peer-key checks, IO capability, identity address."""
 
+import enum
 import secrets
 
 from cryptography.hazmat.primitives.asymmetric import ec
 
 _RANDOM_PART = (1 << 46) - 1
+
+
+class AuthReq(enum.IntFlag):
+    """AuthReq flags (Vol 3 Part H §3.5.1 Figure 3.3): b1:b0 Bonding_Flags (only 0b01 defined), b2 MITM, b3 SC, b4 Keypress, b5 CT2."""
+
+    BONDING = 0x01
+    MITM = 0x04
+    SC = 0x08
+    KEYPRESS = 0x10
+    CT2 = 0x20
+
+
+class IOCap(enum.IntEnum):
+    """IO capability values (Vol 3 Part H §3.5.1 Table 3.4)."""
+
+    DISPLAY_ONLY = 0x00
+    DISPLAY_YES_NO = 0x01
+    KEYBOARD_ONLY = 0x02
+    NO_INPUT_NO_OUTPUT = 0x03
+    KEYBOARD_DISPLAY = 0x04
 
 
 class InvalidPublicKey(ValueError):
@@ -36,11 +57,18 @@ def load_public_key(x: bytes, y: bytes) -> ec.EllipticCurvePublicKey:
 
 
 class BTDevice:
-    """A pairing party: P-256 key pair (pK, pK_x), IOCap (4 = KeyboardDisplay), address, dhkey once computed."""
+    """A pairing party: P-256 key pair (pK, pK_x), IOCap, AuthReq, max key size (1 to 16 octets), address."""
 
     def __init__(
-        self, iocap: int = 4, address: bytes | None = None, address_type: int = 1
+        self,
+        iocap: IOCap = IOCap.KEYBOARD_DISPLAY,
+        address: bytes | None = None,
+        address_type: int = 1,
+        auth_req: AuthReq = AuthReq.BONDING | AuthReq.SC,
+        max_key_size: int = 16,
     ) -> None:
+        if not 1 <= max_key_size <= 16:
+            raise ValueError(f"max_key_size must be 1 to 16, got {max_key_size}")
         if address is None:
             if address_type != 1:
                 raise ValueError(
@@ -57,9 +85,10 @@ class BTDevice:
         self.pK = self._sk.public_key()
         self.pK_x = self.pK.public_numbers().x
         self.IOCap = iocap
+        self.auth_req = auth_req
+        self.max_key_size = max_key_size
         self.address = address
         self.address_type = address_type
-        self.dhkey: bytes | None = None
 
     @property
     def pairing_address(self) -> bytes:
@@ -67,9 +96,7 @@ class BTDevice:
         return bytes([self.address_type]) + self.address
 
     def compute_dh_key(self, peer: ec.EllipticCurvePublicKey) -> bytes:
-        """Set and return dhkey, the 32-octet ECDH secret; InvalidPublicKey (dhkey None) if peer has our X (§2.3.5.6.1)."""
-        self.dhkey = None
+        """The 32-octet ECDH secret (DHKey); InvalidPublicKey if peer has our X coordinate (§2.3.5.6.1)."""
         if peer.public_numbers().x == self.pK_x:
             raise InvalidPublicKey("peer public key has the same X coordinate as ours")
-        self.dhkey = self._sk.exchange(ec.ECDH(), peer)
-        return self.dhkey
+        return self._sk.exchange(ec.ECDH(), peer)

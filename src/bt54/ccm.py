@@ -16,6 +16,24 @@ class InvalidTag(ValueError):
     """The tag does not verify: wrong key, nonce or aad, or tampered data."""
 
 
+def ll_nonce(counter: int, direction: int, iv: bytes) -> bytes:
+    """LE link-layer CCM nonce (Vol 6 Part E Table 2.1): 13 octets; iv is 8 octets MSB-first, direction 1 = sent by the Central."""
+    if not 0 <= counter < 1 << 39:
+        raise ValueError(f"counter must be 0 to 2^39 - 1, got {counter}")
+    if direction not in (0, 1):
+        raise ValueError(f"direction must be 0 or 1, got {direction}")
+    if len(iv) != 8:
+        raise ValueError(f"iv must be 8 octets, got {len(iv)}")
+    return (counter | direction << 39).to_bytes(5, "little") + iv[::-1]
+
+
+def ll_aad(header: int) -> bytes:
+    """LE data PDU AAD (Vol 6 Part E Table 2.3): the header's first octet with NESN, SN and MD set to 0."""
+    if not 0 <= header <= 0xFF:
+        raise ValueError(f"header must be one octet (0 to 255), got {header}")
+    return bytes([header & 0xE3])
+
+
 def _length_field_size(nonce: bytes, aad: bytes, tag_len: int, length: int) -> int:
     """Validate the parameters and return L, the octet size of the message-length field (15 - nonce)."""
     if not 7 <= len(nonce) <= 13:

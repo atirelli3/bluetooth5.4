@@ -50,6 +50,86 @@ def test_ccm_matches_le_sample_data(nonce, header, payload, sealed):
     assert ccm.decrypt(SK, nonce, sealed, aad) == plaintext
 
 
+IV = bytes.fromhex("DEAFBABEBADCAB24")
+CENTRAL, PERIPHERAL = 1, 0
+
+
+@pytest.mark.parametrize(
+    ("counter", "direction", "nonce"),
+    [
+        pytest.param(0, CENTRAL, "000000008024abdcbabebaafde", id="counter0-central"),
+        pytest.param(
+            0, PERIPHERAL, "000000000024abdcbabebaafde", id="counter0-peripheral"
+        ),
+        pytest.param(1, CENTRAL, "010000008024abdcbabebaafde", id="counter1-central"),
+        pytest.param(
+            1, PERIPHERAL, "010000000024abdcbabebaafde", id="counter1-peripheral"
+        ),
+        pytest.param(
+            (1 << 39) - 1, PERIPHERAL, "ffffffff7f24abdcbabebaafde", id="counter-max"
+        ),
+        pytest.param(
+            0x0102030405, CENTRAL, "0504030281" + "24abdcbabebaafde", id="octet-order"
+        ),
+    ],
+)
+def test_ll_nonce_matches_le_sample_data(counter, direction, nonce):
+    """Vol 6 Part E Table 2.1: packetCounter LSO first, directionBit = bit 7 of Nonce4, IV LSO first."""
+    assert ccm.ll_nonce(counter, direction, IV) == bytes.fromhex(nonce)
+
+
+@pytest.mark.parametrize(
+    ("counter", "direction", "iv"),
+    [
+        pytest.param(-1, CENTRAL, IV, id="counter-negative"),
+        pytest.param(1 << 39, CENTRAL, IV, id="counter-39-bits-plus-one"),
+        pytest.param(0, 2, IV, id="direction-2"),
+        pytest.param(0, CENTRAL, IV[:7], id="iv-7-octets"),
+        pytest.param(0, CENTRAL, IV + b"\x00", id="iv-9-octets"),
+    ],
+)
+def test_ll_nonce_rejects_bad_fields(counter, direction, iv):
+    with pytest.raises(ValueError, match="must be"):
+        ccm.ll_nonce(counter, direction, iv)
+
+
+@pytest.mark.parametrize(
+    ("header", "aad"),
+    [
+        pytest.param(0x02, "02", id="LL_DATA1-header"),
+        pytest.param(0x03, "03", id="LL_START_ENC_RSP-header"),
+        pytest.param(0xFF, "e3", id="NESN-SN-MD-masked-rest-kept"),
+        pytest.param(0x04, "00", id="NESN-masked"),
+        pytest.param(0x08, "00", id="SN-masked"),
+        pytest.param(0x10, "00", id="MD-masked"),
+        pytest.param(0x20, "20", id="CP-kept"),
+    ],
+)
+def test_ll_aad_masks_nesn_sn_md(header, aad):
+    """Vol 6 Part E Table 2.3: the header's first octet with NESN, SN and MD set to 0."""
+    assert ccm.ll_aad(header) == bytes.fromhex(aad)
+
+
+@pytest.mark.parametrize("header", [-1, 256])
+def test_ll_aad_rejects_a_header_that_is_not_one_octet(header):
+    with pytest.raises(ValueError, match="one octet"):
+        ccm.ll_aad(header)
+
+
+def test_a_replayed_packet_fails_at_the_next_counter():
+    aad = ccm.ll_aad(0x02)
+    sealed = ccm.encrypt(SK, ccm.ll_nonce(0, CENTRAL, IV), b"payload", aad)
+    with pytest.raises(ccm.InvalidTag):
+        ccm.decrypt(SK, ccm.ll_nonce(1, CENTRAL, IV), sealed, aad)
+
+
+def test_a_reflected_packet_fails_in_the_other_direction():
+    aad = ccm.ll_aad(0x02)
+    sealed = ccm.encrypt(SK, ccm.ll_nonce(0, CENTRAL, IV), b"payload", aad)
+    with pytest.raises(ccm.InvalidTag):
+        ccm.decrypt(SK, ccm.ll_nonce(0, PERIPHERAL, IV), sealed, aad)
+
+
 @pytest.mark.parametrize("nonce_len", [7, 10, 13])
 @pytest.mark.parametrize("tag_len", [4, 10, 16])
 @pytest.mark.parametrize("aad", [b"", b"header", bytes(40)])

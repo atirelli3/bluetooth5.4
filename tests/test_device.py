@@ -18,7 +18,7 @@ P256_P = 2**256 - 2**224 + 2**192 + 2**96 - 1
 def test_both_sides_derive_the_same_32_octet_dhkey():
     alice, bob = BTDevice(), BTDevice()
     shared = alice.compute_dh_key(bob.pK)
-    assert shared == bob.compute_dh_key(alice.pK) == alice.dhkey
+    assert shared == bob.compute_dh_key(alice.pK)
     assert len(shared) == 32
 
 
@@ -34,14 +34,6 @@ def test_a_peer_with_our_x_coordinate_is_rejected():
     mirror = ec.EllipticCurvePublicNumbers(alice.pK_x, P256_P - y, ec.SECP256R1())
     with pytest.raises(InvalidPublicKey, match="same X"):
         alice.compute_dh_key(mirror.public_key())
-
-
-def test_a_rejected_peer_leaves_no_stale_dhkey():
-    alice = BTDevice()
-    alice.compute_dh_key(BTDevice().pK)
-    with pytest.raises(InvalidPublicKey):
-        alice.compute_dh_key(alice.pK)
-    assert alice.dhkey is None
 
 
 def test_load_public_key_round_trips_a_valid_key():
