@@ -1,32 +1,87 @@
-# Bluetooth 5.4
+# bt54: a Bluetooth LE security lab
 
-- Studente:  Tirelli Andrea
-- Corso:     Crittografia Applicata - 2024
+[![CI](https://github.com/atirelli3/bluetooth5.4/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/atirelli3/bluetooth5.4/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https://raw.githubusercontent.com/atirelli3/bluetooth5.4/main/pyproject.toml)](pyproject.toml)
 
-<br />
+A Python simulation lab for **Bluetooth LE security** (Core Specification v5.4): the cryptographic toolbox, LE Secure
+Connections pairing (Just Works, Numeric Comparison; Legacy Pairing only as the `c1` and `s1` functions), AES-CCM,
+Encrypted Advertising Data, and attacks on them (man in the middle, KNOB). Each attack is a command-line scenario with a deterministic expected outcome and a penetration-test style
+write-up. Everything runs against simulated devices and the specification's own sample data: **no radio, no real
+devices**.
 
-**Obiettivo del progetto**:
+## Quick start
 
-In questo progetto che prevede come argomento **Bluetooth**, in particolare la versione **5.4**, un analisi in ambito crittografico e di sicurezza del protocollo e dei nuovi standard introdotti con essa.
-In particolare, lo studio e ricerca del progetto mira a due macro argomenti:
+You need [uv](https://docs.astral.sh/uv/) and Python 3.12 or newer.
 
-- **Pairing Bluetooth**
-- **Encrypted Advertising Data**
+```bash
+uv sync
+uv run python -m bt54 all          # every scenario: expected vs actual, exit code 0 or 1
+uv run python -m bt54 just-works-mitm
+bash scripts/gate.sh               # lint, format, tests, branch coverage >= 95%
+```
 
-In prima fase, il **pairing bluetooth** ci serve per capire come due dispositivi, nettamente diversi tra di loro, possano stabilire un *link* di connessione sicuro; come vengono scelti i metodi di **pairing** e **generazione della chiave**.
-Infine avremmò una chiara idea come funziona il pairing bluetooth, ma soprattutto di quali oggetti crittografici abbiamo a disposizione per il secondo argomento, ovvero **Encrypted Advertising Data**.
+```
+$ uv run python -m bt54 just-works-mitm
+just-works-mitm
+  Eve read: secret LE data
+  expected: paired with both victims; Eve reads and relays the packet
+  actual:   paired with both victims; Eve reads and relays the packet
+  PASS
+```
 
-Encrypted Advertising Data c'è bisogno di garantire garanzie di sicurezza come:
+## Scenarios
 
-- **confidenzialità**
-- **autenticità** (di conseguenza anche **integrità**)
+| Scenario | What it shows | Write-up |
+|---|---|---|
+| `just-works` | an honest Just Works pairing, then an encrypted packet | [pairing](docs/pairing.md) |
+| `just-works-mitm` | Eve pairs with both victims and reads the traffic, undetected | [Just Works MitM](docs/attacks/just-works-mitm.md) |
+| `numeric-comparison` | an honest Numeric Comparison pairing | [pairing](docs/pairing.md) |
+| `numeric-comparison-mitm` | the same attack is caught when the users compare the numbers | [Numeric Comparison MitM](docs/attacks/numeric-comparison-mitm.md) |
+| `numeric-comparison-mitm-blind` | and succeeds when the users accept without comparing | [Numeric Comparison MitM](docs/attacks/numeric-comparison-mitm.md) |
+| `knob-bredr` | BR/EDR key size negotiated down to 1 octet: at most 256 trials recover the key | [KNOB](docs/attacks/knob.md) |
+| `knob-le` | the LE floor of 7 octets: a 1-octet offer is refused, and 2^56 trials are priced | [KNOB](docs/attacks/knob.md) |
 
-Quello che verrà mostrato sarà il contesto presente e perché per ottenere uno schema **AEAD** non possiamo seguire le *best practice* della letteratura, come:
+## What is inside
 
-- **2 chiavi diverse per cifratura e autenticità**
-- **encrypt-then-MAC**
+| Module | What it does |
+|---|---|
+| `src/bt54/toolbox.py` | the Security Manager functions `e`, AES-CMAC, `c1`, `s1`, `f4`, `f5`, `f6`, `g2`, `h6`, `h7` |
+| `src/bt54/ccm.py` | AES-CCM written out for study, plus the LE link-layer nonce and AAD |
+| `src/bt54/device.py` | a simulated device: P-256 key pair, ECDH with the peer-key checks, IO capability, `AuthReq` |
+| `src/bt54/pairing.py` | LE Secure Connections: key size, stage 1 and 2, typed `PairingFailed` errors |
+| `src/bt54/__main__.py` | the scenario command line |
 
-Quale è stata la soluzione proposta e implementata (come standard) nel protocollo v5.4 e le varie motivazioni.
+**Correctness comes first.** No primitive counts as done until a test checks it against the specification's sample
+data: Vol 3 Part H Appendix D, the `c1` and `s1` examples, Vol 6 Part C (session key and CCM packets) and the
+Encrypted Data sample sets of CSS v11. The hand-rolled CCM is also checked against the `cryptography` library, and
+the tests were spot-checked with hand-written mutants: deliberately broken code must make a test fail. The CI gate runs lint, format and
+the tests with at least 95% branch coverage on Python 3.12 and 3.13. Dependabot and a weekly `pip-audit` of the
+lockfile watch the supply chain.
+
+## Encrypted Advertising Data and CCM, in short
+
+Advertising packets are public. Core 5.4 added an *Encrypted Data* AD type: a 5-octet Randomizer, the encrypted AD
+structures and a 4-octet MIC, protected by the same AES-CCM as the LE link layer. The Randomizer plays the role of
+the packet counter in the nonce, and the two devices share one 16-octet session key and one 8-octet IV, which the
+receiver reads from a GATT characteristic over an authenticated link. CCM authenticates with CBC-MAC and then
+encrypts with CTR under a single key, and that is safe, so no second key is needed. `bt54` already verifies the
+specification's sample data for this format; the module itself is next. Details: [CCM](docs/ccm.md),
+[EAD](docs/ead.md).
+
+## Documentation
+
+- [LE pairing](docs/pairing.md): feature exchange, method selection, Secure Connections, Legacy, key size
+- [AES-CCM](docs/ccm.md) and [Encrypted Advertising Data](docs/ead.md)
+- Attacks: [Just Works MitM](docs/attacks/just-works-mitm.md),
+  [Numeric Comparison MitM](docs/attacks/numeric-comparison-mitm.md), [KNOB](docs/attacks/knob.md)
+- [References](docs/references.md); the original 2024 slides are in [docs/cpa.pdf](docs/cpa.pdf) (Italian)
+
+## Roadmap
+
+Next: simulate each device's own view of the protocol messages, the Encrypted Advertising Data module and its
+misuse cases, and more attacks, one at a time with a scenario and a write-up each: Method Confusion, BLURtooth
+(cross-transport key derivation), the Legacy TK brute force, and the LE key size downgrade.
 
 ## Responsible use
 
@@ -34,3 +89,8 @@ Everything in this repository is a simulation: devices, pairings and attacks run
 and the Bluetooth Core Specification's sample data. No code talks to a radio or to a real device. The attack
 scenarios exist to study and explain the weaknesses and their fixes; do not use them against devices you do not own
 or are not authorised to test.
+
+## About
+
+By Andrea Tirelli. It started as the exam project of *Crittografia Applicata* (2024) and grew into this lab.
+Released under the [MIT licence](LICENSE).
