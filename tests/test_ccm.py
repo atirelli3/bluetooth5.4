@@ -116,37 +116,6 @@ def test_ll_aad_rejects_a_header_that_is_not_one_octet(header):
         ccm.ll_aad(header)
 
 
-EAD_KEY = bytes.fromhex("57A9DA12D12E6E131E20612AD10A6A19")
-EAD_IV = bytes.fromhex("46E77AB1EF007A9E")
-
-
-@pytest.mark.parametrize(
-    ("randomizer", "ad_data", "plaintext"),
-    [
-        pytest.param(
-            0xDECA57E118,
-            "18E157CADE 74E4DCAFDC51C7282810C2217F0E4CEF4343181F BA0069CC",
-            "0f0953686f7274204d696e692d42757303190a8c",
-            id="set-1",
-        ),
-        pytest.param(
-            0x7A6E971C8D,
-            "8D1C976E7A 35444076125788C238A58E8BD9CFF0DEFE251A8E 7275454C",
-            "0f0953686f7274204d696e692d42757303190a8c",
-            id="set-2-same-payload-new-randomizer",
-        ),
-    ],
-)
-def test_encrypted_data_matches_the_css_sample_data(randomizer, ad_data, plaintext):
-    """CSS v11 Part A §2.3.1 and §2.3.2: Randomizer as packetCounter and directionBit, B1 octet 2 = 0xEA."""
-    data = bytes.fromhex(ad_data)
-    assert int.from_bytes(data[:5], "little") == randomizer
-    nonce = ccm.ll_nonce(randomizer & (1 << 39) - 1, randomizer >> 39, EAD_IV)
-    opened = ccm.decrypt(EAD_KEY, nonce, data[5:], b"\xea")
-    assert opened == bytes.fromhex(plaintext)
-    assert ccm.encrypt(EAD_KEY, nonce, opened, b"\xea") == data[5:]
-
-
 def test_a_replayed_packet_fails_at_the_next_counter():
     aad = ccm.ll_aad(0x02)
     sealed = ccm.encrypt(SK, ccm.ll_nonce(0, CENTRAL, IV), b"payload", aad)

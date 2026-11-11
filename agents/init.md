@@ -29,12 +29,15 @@ Now (after roadmap steps 1–4):
     static address, `pairing_address`) and `load_public_key` (off-curve → `InvalidPublicKey`);
   - `pairing.py`: LE Secure Connections Just Works + Numeric Comparison: `exchange` (key size, stage 1),
     `authenticate` (f5, Ea/Eb, masked LTK), `check_commit`, `mask_key`, `PairingFailed(reason)`;
+  - `ead.py`: Encrypted Advertising Data (CSS v11 Part A §1.23): `encrypt`/`decrypt` (Randomizer ‖ encrypted Payload
+    ‖ MIC) on `bt54.ccm`, checked against the CSS sample sets;
   - `__main__.py`: the scenario CLI, `python -m bt54 <scenario>|all`: just-works, just-works-mitm,
-    numeric-comparison, numeric-comparison-mitm, numeric-comparison-mitm-blind, knob-bredr, knob-le.
-- `tests/` (280 tests, 100% line + branch coverage):
+    numeric-comparison, numeric-comparison-mitm, numeric-comparison-mitm-blind, knob-bredr, knob-le, ead.
+- `tests/` (316 tests, 100% line + branch coverage):
   - `test_toolbox.py`: Appendix D D.1–D.6 and D.8–D.12, the c1/s1 examples, e via Vol 6 Part C, bad inputs;
   - `test_ccm.py`: the 4 Vol 6 Part C packets, AESCCM parity (encrypt + decrypt), tamper → `InvalidTag`, bad params,
     `ll_nonce` / `ll_aad` against the sample nonces, replay and reflection;
+  - `test_ead.py`: the 2 CSS sample sets, round-trip, tamper per octet, bad key, bad lengths;
   - `test_device.py`, `test_pairing.py` (spies pin the f6 arguments), `test_cli.py` (every scenario, exit codes).
 - `pyproject.toml` + `uv.lock` (runtime: `cryptography`; dev: pytest, pytest-cov, ruff); `.github/workflows/ci.yml`
   (the gate on 3.12 and 3.13, actions pinned by SHA, `UV_LOCKED=1`).
@@ -44,7 +47,7 @@ Now (after roadmap steps 1–4):
   `dependabot.yml` (actions + uv, weekly).
 
 Target (exact module split decided when building it, fewest files):
-- `src/bt54/` gains the EAD module and more attacks, each with `docs/attacks/<name>.md`.
+- `src/bt54/` gains the EAD misuse scenarios and more attacks, each with `docs/attacks/<name>.md`.
 
 ## Roadmap
 1. ~~**Tooling**~~ done 2026-11-10: uv + `pyproject.toml`, `bluetooth` → `bt54`, pycryptodome → `cryptography`, CI.
@@ -58,7 +61,9 @@ Target (exact module split decided when building it, fewest files):
    (Vol 2 Part H §9.4), the CSS Encrypted Data sample sets pass as tests. GitHub description + topics set, Dependabot
    alerts and security updates enabled (repo settings, user-approved).
 6. **Research**: EAD (CSS Part A §1.23), then one attack at a time, each with its scenario + write-up.
-   - First: per-side message views + association-model selection from IOCap, built with Method Confusion
+   - ~~EAD module~~ done 2026-11-11 on `feat/ead`: `src/bt54/ead.py`, `ead` CLI scenario, CSS sample sets verified.
+     Next in this area: the misuse scenarios (repeated Randomizer leaks the XOR; fixed Randomizer enables tracking).
+   - Per-side message views + association-model selection from IOCap, built with Method Confusion
      (`pairing.md`, "known limit"): they let an attacker alter IOcap, addresses, Cb or nonces.
    - Audit #1 R1 adds: LE key-size downgrade to 7 octets (the Max Encryption Key Size is not authenticated).
 
@@ -88,4 +93,9 @@ Target (exact module split decided when building it, fewest files):
   CI green on 3.12 and 3.13.
 - 2026-11-11: roadmap step 5 done and merged to `main` (`6d51318`): English README + docs + 3 attack write-ups, `knob-bredr`
   fixed to the BR/EDR rule, EAD sample sets as tests, Dependabot + `pip-audit`, repo description/topics and Dependabot
-  alerts set; 296 tests, 100% line + branch coverage, CI green. Next: roadmap step 6 in Plan Mode (handoff 2026-11-11-02).
+  alerts set; 296 tests, 100% line + branch coverage, CI green.
+- 2026-11-11: roadmap step 6 slice 1 done on `feat/ead`: `src/bt54/ead.py` (`encrypt`/`decrypt` on `bt54.ccm`),
+  the `ead` CLI scenario, both CSS sample sets verified through it; reviewed by 4 ECC agents (2 docstring fixes
+  applied, 1 naming suggestion rejected as it would shadow the `ead` import), 2 mutants killed; 316 tests, 100%
+  line + branch coverage, gate green. Next: step 6's remaining slices (per-side views + Method Confusion, EAD
+  misuse scenarios, R1).

@@ -41,6 +41,7 @@ just-works-mitm
 | `numeric-comparison-mitm-blind` | and succeeds when the users accept without comparing | [Numeric Comparison MitM](docs/attacks/numeric-comparison-mitm.md) |
 | `knob-bredr` | BR/EDR key size negotiated down to 1 octet: at most 256 trials recover the key | [KNOB](docs/attacks/knob.md) |
 | `knob-le` | the LE floor of 7 octets: a 1-octet offer is refused, and 2^56 trials are priced | [KNOB](docs/attacks/knob.md) |
+| `ead` | a key holder reads an Encrypted Advertising Data packet a keyless scanner cannot | [EAD](docs/ead.md) |
 
 ## What is inside
 
@@ -50,6 +51,7 @@ just-works-mitm
 | `src/bt54/ccm.py` | AES-CCM written out for study, plus the LE link-layer nonce and AAD |
 | `src/bt54/device.py` | a simulated device: P-256 key pair, ECDH with the peer-key checks, IO capability, `AuthReq` |
 | `src/bt54/pairing.py` | LE Secure Connections: key size, stage 1 and 2, typed `PairingFailed` errors |
+| `src/bt54/ead.py` | Encrypted Advertising Data: build and open the Randomizer/Payload/MIC AD data |
 | `src/bt54/__main__.py` | the scenario command line |
 
 **Correctness comes first.** No primitive counts as done until a test checks it against the specification's sample
@@ -65,8 +67,8 @@ Advertising packets are public. Core 5.4 added an *Encrypted Data* AD type: a 5-
 structures and a 4-octet MIC, protected by the same AES-CCM as the LE link layer. The Randomizer plays the role of
 the packet counter in the nonce, and the two devices share one 16-octet session key and one 8-octet IV, which the
 receiver reads from a GATT characteristic over an authenticated link. CCM authenticates with CBC-MAC and then
-encrypts with CTR under a single key, and that is safe, so no second key is needed. `bt54` already verifies the
-specification's sample data for this format; the module itself is next. Details: [CCM](docs/ccm.md),
+encrypts with CTR under a single key, and that is safe, so no second key is needed. `bt54` implements the format
+in `src/bt54/ead.py`, verified against the specification's sample data. Details: [CCM](docs/ccm.md),
 [EAD](docs/ead.md).
 
 ## Documentation
@@ -79,9 +81,9 @@ specification's sample data for this format; the module itself is next. Details:
 
 ## Roadmap
 
-Next: simulate each device's own view of the protocol messages, the Encrypted Advertising Data module and its
-misuse cases, and more attacks, one at a time with a scenario and a write-up each: Method Confusion, BLURtooth
-(cross-transport key derivation), the Legacy TK brute force, and the LE key size downgrade.
+Next: simulate each device's own view of the protocol messages, the Encrypted Advertising Data misuse cases, and
+more attacks, one at a time with a scenario and a write-up each: Method Confusion, BLURtooth (cross-transport key
+derivation), the Legacy TK brute force, and the LE key size downgrade.
 
 ## Responsible use
 

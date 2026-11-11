@@ -40,6 +40,7 @@ def test_the_scenario_names_are_the_documented_ones():
         "numeric-comparison-mitm-blind",
         "knob-bredr",
         "knob-le",
+        "ead",
     ]
 
 
@@ -215,6 +216,11 @@ def test_knob_bredr_zeroes_the_least_significant_octets(monkeypatch, capsys):
     monkeypatch.setattr(cli.secrets, "token_bytes", lambda n: b"\x7c" * n)
     assert cli.knob_bredr() == "key recovered"
     assert "session key (1 octet): 7c" + "00" * 15 + "," in capsys.readouterr().out
+
+
+def test_ead_scenario_reports_a_scanner_that_draws_the_same_key(monkeypatch):
+    monkeypatch.setattr(cli.secrets, "token_bytes", lambda n: b"\x7c" * n)
+    assert cli.ead_scenario() == "scanner without the key opened the advertisement"
 
 
 def test_the_brute_force_finds_nothing_in_too_small_a_key_space():

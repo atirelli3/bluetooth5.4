@@ -13,7 +13,7 @@ from functools import partial
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESCCM
 
-from bt54 import ccm
+from bt54 import ccm, ead
 from bt54.device import AuthReq, BTDevice, IOCap
 from bt54.pairing import (
     PairingFailed,
@@ -25,6 +25,7 @@ from bt54.pairing import (
 from bt54.toolbox import e
 
 MESSAGE = b"secret LE data"
+_EAD_PAYLOAD = bytes.fromhex("0f0953686f7274204d696e692d42757303190a8c")
 _CENTRAL = 1
 _HEADER = 0x02
 _JUST_WORKS = partial(
@@ -191,6 +192,18 @@ def knob_le() -> str:
     return f"{refusal}; 2^56 trials take {_duration(hardware)} at an assumed 10^{_ASSUMED_RATE_EXPONENT} trials/s"
 
 
+def ead_scenario() -> str:
+    """Encrypted Advertising Data (CSS v11 Part A §1.23): the key holder reads it, a scanner without the key does not."""
+    key, iv = secrets.token_bytes(16), secrets.token_bytes(8)
+    data = ead.encrypt(key, iv, _EAD_PAYLOAD)
+    ead.decrypt(key, iv, data)
+    try:
+        ead.decrypt(secrets.token_bytes(16), iv, data)
+    except ccm.InvalidTag:
+        return "key holder reads the advertisement; a scanner without the key fails the MIC"
+    return "scanner without the key opened the advertisement"
+
+
 SCENARIOS: dict[str, tuple[str, Callable[[], str]]] = {
     "just-works": (_PAIRED, lambda: _pair_and_talk(_JUST_WORKS)),
     "just-works-mitm": (_RELAYED, lambda: _mitm(False, _JUST_WORKS)),
@@ -204,6 +217,10 @@ SCENARIOS: dict[str, tuple[str, Callable[[], str]]] = {
     "knob-le": (
         "pairing failed: ENCRYPTION_KEY_SIZE; 2^56 trials take 83 days at an assumed 10^10 trials/s",
         knob_le,
+    ),
+    "ead": (
+        "key holder reads the advertisement; a scanner without the key fails the MIC",
+        ead_scenario,
     ),
 }
 

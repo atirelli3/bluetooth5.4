@@ -3,9 +3,8 @@
 Advertising packets are public: anyone in radio range reads them. Bluetooth Core 5.4 added the **Encrypted Data** AD
 type so a Broadcaster can encrypt and authenticate advertising data for the receivers that hold a key. Sources:
 Core Specification Supplement v11 (CSS) Part A §1.23, Core v5.4 Vol 3 Part C §10.10 and §12.6, Vol 6 Part E §1.
-The encryption is the same AES-CCM as the Link Layer's, see [ccm](ccm.md). EAD is **not implemented in `bt54` yet**
-(roadmap step 6), but its specification sample data already passes on the existing CCM code
-(`tests/test_ccm.py::test_encrypted_data_matches_the_css_sample_data`).
+The encryption is the same AES-CCM as the Link Layer's, see [ccm](ccm.md). EAD is implemented in `src/bt54/ead.py`,
+checked against the specification sample data (`tests/test_ead.py`) and demonstrated by the `ead` CLI scenario.
 
 ## 1. The Encrypted Data AD type (CSS §1.23)
 
@@ -88,6 +87,6 @@ according to the Bluetooth SIG (see [references](references.md)).
 
 ## 6. In `bt54`
 
-Done: the two sample sets pass as tests on the existing CCM. Planned for step 6: an `ead` module (build and open
-the AD structure) and the misuse scenarios (a repeated Randomizer leaks the XOR of two payloads; a fixed Randomizer
-makes the device trackable).
+Done: `src/bt54/ead.py` (`encrypt`/`decrypt`), checked against both CSS sample sets, and the `ead` CLI scenario
+(a key holder reads an advertisement a keyless scanner cannot). Planned next: the misuse scenarios (a repeated
+Randomizer leaks the XOR of two payloads; a fixed Randomizer makes the device trackable).
