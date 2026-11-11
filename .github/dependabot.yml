@@ -6,6 +6,8 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
+    commit-message:
+      prefix: "ci"
     groups:
       actions:
         patterns: ["*"]
@@ -15,6 +17,8 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
+    commit-message:
+      prefix: "chore"
     groups:
       python:
         patterns: ["*"]
