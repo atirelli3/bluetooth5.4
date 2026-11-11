@@ -53,10 +53,10 @@ Target (exact module split decided when building it, fewest files):
 3. ~~**Audit #1**~~ done 2026-11-10 (`agents/audits/2026-11-10-01.md`): L1–L4, T1–T10, A1–A6, D7 fixed.
 4. ~~**CLI**~~ done 2026-11-11 on `feat/cli`: `python -m bt54 <scenario>|all`, 7 scenarios, `src/demo.py` deleted.
    Audit #1 P1–P10 met, except CT2 → h6/h7 (CTKD), which waits for BLURtooth in step 6 (CT2 stays 0 for now).
-5. ~~**Portfolio**~~ done 2026-11-11 on `feat/portfolio-docs` (CI green, not yet merged): English README + CI badge,
-   corrected docs (D1–D11, P1), 3 attack write-ups, Dependabot + `pip-audit`, `knob-bredr` fixed to the BR/EDR rule
-   (Vol 2 Part H §9.4), the CSS Encrypted Data sample sets pass as tests. Open, each needs the user's yes: merge to
-   `main`, GitHub description/topics, Dependabot alerts + security updates (repo settings).
+5. ~~**Portfolio**~~ done 2026-11-11, merged to `main` (`eac22e1`, CI green): English README + CI badge, corrected
+   docs (D1–D11, P1), 3 attack write-ups, Dependabot + `pip-audit`, `knob-bredr` fixed to the BR/EDR rule
+   (Vol 2 Part H §9.4), the CSS Encrypted Data sample sets pass as tests. GitHub description + topics set, Dependabot
+   alerts and security updates enabled (repo settings, user-approved).
 6. **Research**: EAD (CSS Part A §1.23), then one attack at a time, each with its scenario + write-up.
    - First: per-side message views + association-model selection from IOCap, built with Method Confusion
      (`pairing.md`, "known limit"): they let an attacker alter IOcap, addresses, Cb or nonces.
