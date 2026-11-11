@@ -69,7 +69,9 @@ proposing a change or a cut so nothing already decided is re-proposed. Full regi
   LEAST significant ones (Vol 2 Part H §9.4). `knob-bredr` now uses `mask_key_bredr`; the 2024 demo's
   "keep the leading octets" was the BR/EDR rule.
 - [KEPT] `audit.yml` is a separate workflow with the stable `pip-audit` pinned to 2.10.1, not the preview `uv audit`;
-  `scripts/gate.sh` stays offline.
+  `scripts/gate.sh` stays offline. Dependabot cannot see the inline pin: bump `pip-audit==` by hand when a new
+  release appears. Keep the workflow out of any required-checks list; a scheduled workflow is switched off after
+  60 days without repository activity.
 
 ## Step 4 CLI reviews (2026-11-11, ecc code-reviewer, security-reviewer, silent-failure-hunter, python-reviewer)
 - [USER-YES] The `knob-le` verdict uses real attacker speed, not the Python-limited one: 2^56 trials at an assumed

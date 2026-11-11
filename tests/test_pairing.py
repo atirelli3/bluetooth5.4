@@ -149,7 +149,7 @@ def test_the_number_is_g2_mod_10_to_the_6():
     ],
 )
 def test_both_devices_must_set_sc(central_flags, peripheral_flags):
-    """Vol 3 Part H §2.3.1: without SC on both sides the pairing is legacy, which bt54 does not simulate."""
+    """Vol 3 Part H §3.5.1 (SC field): without SC on both sides the pairing is legacy, which bt54 does not simulate."""
     with pytest.raises(ValueError, match="SC flag"):
         exchange(BTDevice(auth_req=central_flags), BTDevice(auth_req=peripheral_flags))
 

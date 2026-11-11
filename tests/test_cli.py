@@ -210,12 +210,11 @@ def test_the_bredr_brute_force_does_not_find_an_le_masked_key():
     assert cli._recover_key(sealed, NONCE, AAD, 1, bredr=True) == (None, 256)
 
 
-def test_knob_bredr_zeroes_the_least_significant_octets(capsys):
+def test_knob_bredr_zeroes_the_least_significant_octets(monkeypatch, capsys):
     """The session key it prints is one octet then 15 zero octets (BR/EDR), not the LE layout."""
+    monkeypatch.setattr(cli.secrets, "token_bytes", lambda n: b"\x7c" * n)
     assert cli.knob_bredr() == "key recovered"
-    assert re.search(
-        r"session key \(1 octet\): [0-9a-f]{2}0{30},", capsys.readouterr().out
-    )
+    assert "session key (1 octet): 7c" + "00" * 15 + "," in capsys.readouterr().out
 
 
 def test_the_brute_force_finds_nothing_in_too_small_a_key_space():
@@ -223,9 +222,10 @@ def test_the_brute_force_finds_nothing_in_too_small_a_key_space():
     assert cli._recover_key(sealed, NONCE, AAD, 1) == (None, 256)
 
 
-def test_the_brute_force_does_not_hide_a_bad_parameter():
+@pytest.mark.parametrize("bredr", [False, True])
+def test_the_brute_force_does_not_hide_a_bad_parameter(bredr):
     """ead-and-ccm.md: only InvalidTag means 'wrong key'; a bad nonce must not read as 'key not found'."""
     _, sealed = sealed_under(1)
     with pytest.raises(ValueError, match="nonce must be") as raised:
-        cli._recover_key(sealed, bytes(6), AAD, 1)
+        cli._recover_key(sealed, bytes(6), AAD, 1, bredr=bredr)
     assert not isinstance(raised.value, ccm.InvalidTag)

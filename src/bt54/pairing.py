@@ -1,7 +1,8 @@
 """LE Secure Connections pairing, Just Works and Numeric Comparison (Core v5.4 Vol 3 Part H §2.3.5.6); values MSB-first.
 
 The central is the initiating device (A in f5/f6), the peripheral the responding one (B). Whether the users accept the
-number is the caller's step, outside this module.
+number is the caller's step, outside this module. `mask_key_bredr` is the BR/EDR counterpart of `mask_key`, kept here
+beside it because the two rules are opposite.
 """
 
 import hmac
@@ -78,7 +79,7 @@ def check_commit(commit: bytes, pk_a: bytes, pk_b: bytes, nb: bytes) -> None:
 def exchange(central: BTDevice, peripheral: BTDevice) -> Exchange:
     """Key size (§2.3.4: the shorter maximum, at least 7) and stage 1 (§2.3.5.6.2): DHKeys, Cb, Na, Nb, g2 mod 10^6.
 
-    Both devices must set SC (§2.3.1; legacy pairing is not simulated). Cb is checked against the nonce this call
+    Both devices must set SC (§3.5.1; legacy pairing is not simulated). Cb is checked against the nonce this call
     drew, so it cannot fail here: a scenario that tampers with Nb or Cb calls `check_commit` with its own values.
     """
     if not central.auth_req & peripheral.auth_req & AuthReq.SC:

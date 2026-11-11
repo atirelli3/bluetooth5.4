@@ -1,2 +1,0 @@
-# Gestione delle chiavi
-
